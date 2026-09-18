@@ -1,5 +1,8 @@
 create extension if not exists "pgcrypto";
 
+-- ArtistPilot V1 initial schema.
+-- Regulatory truth remains deterministic, sourced and versioned separately.
+
 create table public.artist_profiles (
   id uuid primary key default gen_random_uuid(),
   name text not null,
