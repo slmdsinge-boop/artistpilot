@@ -10,10 +10,29 @@ const modules = [
 ] as const;
 
 export default async function Home() {
+  const hasUrl = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const hasKey = Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
+  if (!hasUrl || !hasKey) {
+    return (
+      <main className="mx-auto min-h-screen max-w-md bg-white px-5 py-10">
+        <p className="text-sm font-semibold text-neutral-500">ArtistPilot</p>
+        <h1 className="mt-2 text-2xl font-bold">Configuration Supabase incomplète</h1>
+        <p className="mt-4 text-neutral-600">
+          Le déploiement fonctionne, mais Vercel ne transmet pas encore toutes les variables au serveur.
+        </p>
+        <div className="mt-6 space-y-2 rounded-2xl border border-neutral-200 p-4 text-sm">
+          <p>NEXT_PUBLIC_SUPABASE_URL : <strong>{hasUrl ? "présente" : "absente"}</strong></p>
+          <p>NEXT_PUBLIC_SUPABASE_ANON_KEY : <strong>{hasKey ? "présente" : "absente"}</strong></p>
+        </div>
+      </main>
+    );
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && !user) {
+  if (!user) {
     redirect("/login");
   }
 
