@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, FolderKanban, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createProject, deleteProject } from "./actions";
+import { createProject, deleteProject, updateProjectFundingFacts } from "./actions";
 
 const projectTypes = [
   ["album","Album"],["ep","EP"],["single","Single"],["clip","Clip"],
@@ -17,7 +17,7 @@ export default async function ProjectsPage({searchParams}:{searchParams:SearchPa
   if(!user) redirect("/login");
   const {data:access}=await supabase.from("user_artist_access").select("artist_id").eq("user_id",user.id).limit(1).maybeSingle();
 
-  const projects=access?.artist_id ? (await supabase.from("projects").select("id,name,project_type,status,description,start_date,target_date,organization_id,organizations(name)").eq("artist_id",access.artist_id).order("created_at",{ascending:false})).data ?? [] : [];
+  const projects=access?.artist_id ? (await supabase.from("projects").select("id,name,project_type,status,description,start_date,target_date,organization_id,organizations(name),budget_eur,performance_count,artist_count,international,recording_started,recording_finished").eq("artist_id",access.artist_id).order("created_at",{ascending:false})).data ?? [] : [];
   const organizations=access?.artist_id ? (await supabase.from("organizations").select("id,name").eq("artist_id",access.artist_id).order("name")).data ?? [] : [];
   const params=await searchParams;
   const error=typeof params.error==="string"?params.error:null;
@@ -36,6 +36,7 @@ export default async function ProjectsPage({searchParams}:{searchParams:SearchPa
         {p.organizations&&<p className="mt-1 text-xs text-neutral-500">Porté par : {(p.organizations as unknown as {name?:string}).name}</p>}
         {p.target_date&&<p className="mt-1 text-xs text-neutral-500">Échéance cible : {new Intl.DateTimeFormat("fr-FR").format(new Date(p.target_date+"T12:00:00"))}</p>}</div>
         <form action={deleteProject}><input type="hidden" name="id" value={p.id}/><button aria-label="Supprimer le projet" className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-100 hover:text-red-600"><Trash2 size={18}/></button></form></div>
+        <form action={updateProjectFundingFacts} className="mt-4 border-t border-neutral-100 pt-4"><input type="hidden" name="id" value={p.id}/><p className="text-sm font-semibold">Informations financement</p><p className="mt-1 text-xs text-neutral-500">Renseigne uniquement ce que tu sais. Une valeur vide reste inconnue.</p><div className="mt-3 grid grid-cols-2 gap-2"><label className="text-xs">Budget (€)<input name="budget_eur" type="number" min="0" step="0.01" defaultValue={p.budget_eur??""} className="mt-1 h-9 w-full rounded-lg border px-2"/></label><label className="text-xs">Concerts prévus<input name="performance_count" type="number" min="0" step="1" defaultValue={p.performance_count??""} className="mt-1 h-9 w-full rounded-lg border px-2"/></label><label className="text-xs">Artistes concernés<input name="artist_count" type="number" min="0" step="1" defaultValue={p.artist_count??""} className="mt-1 h-9 w-full rounded-lg border px-2"/></label></div>{[["international","Projet international",p.international],["recording_started","Enregistrement commencé",p.recording_started],["recording_finished","Enregistrement terminé",p.recording_finished]].map(([name,label,value])=><label key={String(name)} className="mt-3 block text-xs">{String(label)}<select name={String(name)} defaultValue={value===true?"yes":value===false?"no":""} className="mt-1 h-9 w-full rounded-lg border bg-white px-2"><option value="">Je ne sais pas</option><option value="yes">Oui</option><option value="no">Non</option></select></label>)}<button className="mt-3 h-10 w-full rounded-xl bg-neutral-900 text-sm font-semibold text-white">Enregistrer les informations financement</button></form>
       </article>)}</div>}
     </section>
 
