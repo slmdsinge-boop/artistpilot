@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { syncOrganizationEligibilityFacts } from "./actions";
 const tri=(v:FormDataEntryValue|null)=>v==="yes"?true:v==="no"?false:null;
 export async function updateOrganizationFacts(formData:FormData){
  const id=String(formData.get("id")??""); if(!id) redirect("/organizations");
@@ -17,5 +18,9 @@ export async function updateOrganizationFacts(formData:FormData){
  };
  const {error}=await supabase.from("organizations").update(payload).eq("id",id).eq("artist_id",access.artist_id);
  if(error) redirect(`/organizations?error=${encodeURIComponent(error.message)}`);
+ await syncOrganizationEligibilityFacts(id,{
+  cnm_affiliated:payload.cnm_affiliated,sacem_affiliated:payload.sacem_affiliated,sppf_affiliated:payload.sppf_affiliated,
+  phonogram_producer:payload.phonogram_producer,owns_masters:payload.owns_masters,employs_artists:payload.employs_artists
+ });
  revalidatePath("/organizations");revalidatePath("/funding");revalidatePath("/");redirect("/organizations?saved=1");
 }
