@@ -32,7 +32,8 @@ export async function trackFunding(formData:FormData){
  const {data:existing}=await existingQuery.limit(1).maybeSingle();
  if(existing) redirect("/funding?error=already_tracked");
  const {error}=await supabase.from("funding_applications").insert({artist_id:artistId,project_id:projectId,organization_id:organizationId??projectOrganizationId,funding_program_id:programId,status:"to_check"});
- if(error) redirect(`/funding?error=${encodeURIComponent(error.message)}`);
+ if(error?.code==="23505") redirect("/funding?error=already_tracked");
+ if(error) redirect("/funding?error=save_failed");
  revalidatePath("/funding"); redirect("/funding?tracked=1");
 }
 
