@@ -21,7 +21,13 @@ export async function trackFunding(formData:FormData){
  if(projectId&&organizationId&&projectOrganizationId&&organizationId!==projectOrganizationId) redirect("/funding?error=project_organization_mismatch");
  const {data:program}=await supabase.from("funding_programs").select("id,verification_status").eq("id",programId).maybeSingle();
  if(!program||program.verification_status!=="verified") redirect("/funding?error=program_not_verified");
- const {data:existing}=await supabase.from("funding_applications").select("id").eq("artist_id",artistId).eq("funding_program_id",programId).eq("project_id",projectId).limit(1).maybeSingle();
+ let existingQuery=supabase.from("funding_applications").select("id").eq("artist_id",artistId).eq("funding_program_id",programId);
+ existingQuery=projectId?existingQuery.eq("project_id",projectId):existingQuery.is("project_id",null);
+ if(!projectId){
+   const effectiveOrganizationId=organizationId??projectOrganizationId;
+   existingQuery=effectiveOrganizationId?existingQuery.eq("organization_id",effectiveOrganizationId):existingQuery.is("organization_id",null);
+ }
+ const {data:existing}=await existingQuery.limit(1).maybeSingle();
  if(existing) redirect("/funding?error=already_tracked");
  const {error}=await supabase.from("funding_applications").insert({artist_id:artistId,project_id:projectId,organization_id:organizationId??projectOrganizationId,funding_program_id:programId,status:"to_check"});
  if(error) redirect(`/funding?error=${encodeURIComponent(error.message)}`);
