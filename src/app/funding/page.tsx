@@ -22,7 +22,9 @@ export default async function FundingPage(){
   const {data:detail}=await supabase.rpc("evaluate_funding_eligibility_v23",{target_artist:artistId,target_project:project.id,target_organization:orgId});
   const grouped=new Map<string,any>();
   for(const row of detail??[]){const g=grouped.get(row.funding_program_id)??{project_id:project.id,project_name:project.name,funding_program_id:row.funding_program_id,provider_name:row.provider_name,program_name:row.program_name,satisfied_count:0,missing_count:0,not_met_count:0,total_count:0};g.total_count++;if(row.criterion_status==="satisfied")g.satisfied_count++;else if(row.criterion_status==="missing_information"||row.criterion_status==="pending_context")g.missing_count++;else if(row.criterion_status==="criterion_not_met"&&row.blocking&&row.criterion_kind==="eligibility")g.not_met_count++;grouped.set(row.funding_program_id,g);}
-  for(const g of grouped.values()){g.eligibility_status=g.not_met_count?"criterion_not_met":g.missing_count?"missing_information":"potentially_compatible";v2Rows.push(g);}
+  const {data:readiness}=await supabase.rpc("funding_program_readiness",{target_artist:artistId,target_project:project.id});
+  const readinessByProgram=new Map((readiness??[]).map((r:any)=>[r.funding_program_id,r]));
+  for(const g of grouped.values()){const rd:any=readinessByProgram.get(g.funding_program_id);g.readiness_status=rd?.readiness_status??"to_verify";g.readiness_reason=rd?.reason??"Niveau de vérification inconnu.";g.eligibility_status=g.readiness_status!=="ready"?"verification_required":g.not_met_count?"criterion_not_met":g.missing_count?"missing_information":"potentially_compatible";v2Rows.push(g);}
  }
  const missingFacts:any[]=[];
  if(artistId) for(const project of projects){
