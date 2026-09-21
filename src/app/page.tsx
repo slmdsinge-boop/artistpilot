@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { UniversalAdd } from "@/components/universal-add";
 
 const modules = [
-  ["Projets", FolderKanban, null], ["Financements", CircleDollarSign, null],
+  ["Projets", FolderKanban, "/projects"], ["Financements", CircleDollarSign, null],
   ["Œuvres & droits", Music2, null], ["Concerts", CalendarDays, null],
   ["Documents", FolderOpen, null], ["Organisations", Building2, "/organizations"],
 ] as const;
