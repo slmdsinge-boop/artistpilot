@@ -86,15 +86,17 @@ export async function syncOrganizationEligibilityFacts(organizationId: string, v
 
   for (const [column, factKey] of eligibilityOrganizationFacts) {
     const value=values[column];
-    const { data: existing } = await supabase.from("entity_facts")
+    const { data: existing, error: lookupError } = await supabase.from("entity_facts")
       .select("id,confirmation_status,source_note")
       .eq("artist_id",artistId).eq("subject_type","organization").eq("subject_id",organizationId).eq("fact_key",factKey)
       .maybeSingle();
+    if (lookupError) throw new Error("organization_fact_sync_failed");
 
     if (value===null || value===undefined) {
       // Clearing a profile field must not erase a stronger fact captured elsewhere.
       if (existing?.source_note==="Synchronisé depuis le profil de la structure") {
-        await supabase.from("entity_facts").delete().eq("id",existing.id);
+        const { error } = await supabase.from("entity_facts").delete().eq("id",existing.id);
+        if (error) throw new Error("organization_fact_sync_failed");
       }
       continue;
     }
@@ -106,7 +108,9 @@ export async function syncOrganizationEligibilityFacts(organizationId: string, v
       artist_id:artistId,subject_type:"organization",subject_id:organizationId,fact_key:factKey,
       value,confirmation_status:"user_confirmed",source_note:"Synchronisé depuis le profil de la structure",confirmed_at:new Date().toISOString()
     };
-    if(existing?.id) await supabase.from("entity_facts").update(payload).eq("id",existing.id);
-    else await supabase.from("entity_facts").insert(payload);
+    const { error } = existing?.id
+      ? await supabase.from("entity_facts").update(payload).eq("id",existing.id)
+      : await supabase.from("entity_facts").insert(payload);
+    if (error) throw new Error("organization_fact_sync_failed");
   }
 }
