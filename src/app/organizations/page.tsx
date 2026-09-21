@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, Building2, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createOrganization, deleteOrganization } from "./actions";\nimport { updateOrganizationFacts } from "./profile-actions";
+import { createOrganization, deleteOrganization } from "./actions";
+import { updateOrganizationFacts } from "./profile-actions";
 
 const organizationTypes = [
   ["association", "Association"],
