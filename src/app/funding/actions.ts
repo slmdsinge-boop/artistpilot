@@ -55,7 +55,7 @@ export async function updateFundingStatus(formData:FormData){
  const {data:application}=await supabase.from("funding_applications").select("id,status,submitted_at,decision_at").eq("id",applicationId).eq("artist_id",artistId).maybeSingle();
  if(!application) redirect("/funding?error=invalid_application");
  if(application.status===status) redirect("/funding");
- const today=new Date().toISOString().slice(0,10);\n const updates:any={status};\n if(status==="submitted"&&!application.submitted_at) updates.submitted_at=today;\n if(["awarded","rejected"].includes(status)&&!application.decision_at) updates.decision_at=today;\n const {error}=await supabase.from("funding_applications").update(updates).eq("id",applicationId).eq("artist_id",artistId);
+ const today=new Date().toISOString().slice(0,10);\n const updates:any={status};\n if(status==="submitted"&&!application.submitted_at) updates.submitted_at=today;\n if(["awarded","rejected"].includes(status)&&!application.decision_at) updates.decision_at=today;\n if(["awarded","rejected"].includes(status)&&!application.submitted_at) updates.submitted_at=today;\n if(status==="submitted") updates.decision_at=null;\n const {error}=await supabase.from("funding_applications").update(updates).eq("id",applicationId).eq("artist_id",artistId);
  if(error) redirect("/funding?error=status_update_failed");
  revalidatePath("/funding"); revalidatePath("/"); redirect("/funding?status_updated=1");
 }
