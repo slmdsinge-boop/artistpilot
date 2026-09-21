@@ -55,7 +55,7 @@ export async function createOrganization(formData: FormData) {
     siret,
   });
 
-  if (error) redirect(`/organizations?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect("/organizations?error=save_failed");
 
   revalidatePath("/");
   revalidatePath("/organizations");
@@ -68,7 +68,7 @@ export async function deleteOrganization(formData: FormData) {
 
   const { supabase } = await requireUserAndArtist();
   const { error } = await supabase.from("organizations").delete().eq("id", id);
-  if (error) redirect(`/organizations?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect("/organizations?error=save_failed");
 
   revalidatePath("/organizations");
   redirect("/organizations?deleted=1");
