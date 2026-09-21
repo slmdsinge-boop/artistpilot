@@ -12,7 +12,7 @@ async function requireContext() {
   if (access?.artist_id) return { supabase, artistId: access.artist_id as string };
   const fallbackName=(user.user_metadata?.full_name as string|undefined)??user.email?.split("@")[0]??"Mon profil artiste";
   const {data:artistId,error}=await supabase.rpc("bootstrap_artist_profile",{display_name:fallbackName});
-  if(error||!artistId) throw new Error(error?.message??"Impossible de créer le profil artiste.");
+  if(error||!artistId) redirect("/projects?error=profile_setup_failed");
   return {supabase,artistId:artistId as string};
 }
 
