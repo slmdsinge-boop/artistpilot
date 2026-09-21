@@ -45,6 +45,21 @@ export async function trackFunding(formData:FormData){
  revalidatePath("/funding"); redirect("/funding?tracked=1");
 }
 
+
+export async function updateFundingStatus(formData:FormData){
+ const applicationId=String(formData.get("application_id")??"").trim();
+ const status=String(formData.get("status")??"").trim();
+ const allowed=new Set(["identified","to_check","preparing","submitted","awarded","rejected","withdrawn"]);
+ if(!applicationId||!allowed.has(status)) redirect("/funding?error=invalid_application_status");
+ const {supabase,artistId}=await context();
+ const {data:application}=await supabase.from("funding_applications").select("id,status").eq("id",applicationId).eq("artist_id",artistId).maybeSingle();
+ if(!application) redirect("/funding?error=invalid_application");
+ if(application.status===status) redirect("/funding");
+ const {error}=await supabase.from("funding_applications").update({status}).eq("id",applicationId).eq("artist_id",artistId);
+ if(error) redirect("/funding?error=status_update_failed");
+ revalidatePath("/funding"); revalidatePath("/"); redirect("/funding?status_updated=1");
+}
+
 export async function saveEligibilityFact(formData:FormData){
  const subjectType=String(formData.get("subject_type")??"");
  const subjectId=String(formData.get("subject_id")??"");
