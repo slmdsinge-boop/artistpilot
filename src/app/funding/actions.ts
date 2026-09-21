@@ -58,7 +58,7 @@ export async function updateFundingStatus(formData:FormData){
  if(status==="submitted"&&!application.submitted_at) redirect("/funding?error=missing_submitted_date");
  if(["awarded","rejected"].includes(status)&&!application.submitted_at) redirect("/funding?error=missing_submitted_date");
  if(["awarded","rejected"].includes(status)&&!application.decision_at) redirect("/funding?error=missing_decision_date");
- const updates:any={status};\n if(status==="submitted") updates.decision_at=null;\n if(["identified","to_check","preparing"].includes(status)){updates.submitted_at=null;updates.decision_at=null;}\n if(status==="withdrawn") updates.decision_at=null;\n const {error}=await supabase.from("funding_applications").update(updates).eq("id",applicationId).eq("artist_id",artistId);
+ const updates:any={status};\n // Changing workflow status must not erase historical milestone dates.\n // Dates are edited explicitly in the dossier details so recorded facts remain traceable.\n const {error}=await supabase.from("funding_applications").update(updates).eq("id",applicationId).eq("artist_id",artistId);
  if(error) redirect("/funding?error=status_update_failed");
  revalidatePath("/funding"); revalidatePath("/"); redirect("/funding?status_updated=1");
 }
