@@ -26,22 +26,23 @@ export default async function FundingPage({searchParams}:{searchParams:SearchPar
  const organizationById=new Map(organizations.map(o=>[o.id,o]));
  const applications=artistId?(await supabase.from("funding_applications").select("id,status,funding_programs(provider_name,name),projects(name)").eq("artist_id",artistId).order("created_at",{ascending:false})).data??[]:[];
  const v2Rows:any[]=[];
+ const eligibilityDetailsByProject=new Map<string,any[]>();
+ const readinessByProject=new Map<string,any[]>();
  if(artistId) for(const project of projects){
   const orgId=project.organization_id??null;
-  const {data:detail}=await supabase.rpc("evaluate_funding_eligibility_v23",{target_artist:artistId,target_project:project.id,target_organization:orgId});
+  const [{data:detail},{data:readiness}]=await Promise.all([supabase.rpc("evaluate_funding_eligibility_v23",{target_artist:artistId,target_project:project.id,target_organization:orgId}),supabase.rpc("funding_program_readiness",{target_artist:artistId,target_project:project.id})]);
+  eligibilityDetailsByProject.set(project.id,detail??[]); readinessByProject.set(project.id,readiness??[]);
   const grouped=new Map<string,any>();
   for(const row of detail??[]){const g=grouped.get(row.funding_program_id)??{project_id:project.id,project_name:project.name,funding_program_id:row.funding_program_id,provider_name:row.provider_name,program_name:row.program_name,satisfied_count:0,missing_count:0,not_met_count:0,total_count:0};g.total_count++;if(row.criterion_status==="satisfied")g.satisfied_count++;else if(row.criterion_status==="missing_information"||row.criterion_status==="pending_context")g.missing_count++;else if(row.criterion_status==="criterion_not_met"&&row.blocking&&row.criterion_kind==="eligibility")g.not_met_count++;grouped.set(row.funding_program_id,g);}
-  const {data:readiness}=await supabase.rpc("funding_program_readiness",{target_artist:artistId,target_project:project.id});
   const readinessByProgram=new Map((readiness??[]).map((r:any)=>[r.funding_program_id,r]));
   for(const g of grouped.values()){const rd:any=readinessByProgram.get(g.funding_program_id);g.readiness_status=rd?.readiness_status??"to_verify";g.readiness_reason=rd?.reason??"Niveau de vérification inconnu.";g.eligibility_status=g.readiness_status!=="ready"?"verification_required":g.not_met_count?"criterion_not_met":g.missing_count?"missing_information":"potentially_compatible";v2Rows.push(g);}
  }
  const missingFacts:any[]=[];
- for(const row of v2Rows.flatMap(()=>[])) void row;
  if(artistId) for(const project of projects){
   const orgId=project.organization_id??null; const org=orgId?organizationById.get(orgId):null;
-  const [{data},{data:readiness}]=await Promise.all([supabase.rpc("evaluate_funding_eligibility_v23",{target_artist:artistId,target_project:project.id,target_organization:orgId}),supabase.rpc("funding_program_readiness",{target_artist:artistId,target_project:project.id})]);
-  const readyPrograms=new Set((readiness??[]).filter((r:any)=>r.readiness_status==="ready").map((r:any)=>r.funding_program_id));
-  for(const row of (data??[]).filter((x:any)=>readyPrograms.has(x.funding_program_id)&&(x.criterion_status==="missing_information"||x.criterion_status==="pending_context")&&x.blocking&&x.criterion_kind==="eligibility"&&["project","organization"].includes(x.criterion_subject_type))) missingFacts.push({project_id:project.id,project_name:project.name,organization_id:orgId,organization_name:org?.name,...row});
+  const data=eligibilityDetailsByProject.get(project.id)??[]; const readiness=readinessByProject.get(project.id)??[];
+  const readyPrograms=new Set(readiness.filter((r:any)=>r.readiness_status==="ready").map((r:any)=>r.funding_program_id));
+  for(const row of data.filter((x:any)=>readyPrograms.has(x.funding_program_id)&&(x.criterion_status==="missing_information"||x.criterion_status==="pending_context")&&x.blocking&&x.criterion_kind==="eligibility"&&["project","organization"].includes(x.criterion_subject_type))) missingFacts.push({project_id:project.id,project_name:project.name,organization_id:orgId,organization_name:org?.name,...row});
  }
  const numericOps=new Set(["gte","lte","gt","lt"]);
  const dedupedMissing=Array.from(new Map(missingFacts.map((m:any)=>[(m.criterion_subject_type==="organization"?(m.organization_id||"no-org"):m.project_id)+"|"+m.criterion_key,m])).values()) as any[];
