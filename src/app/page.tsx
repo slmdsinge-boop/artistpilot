@@ -51,12 +51,20 @@ export default async function Home() {
     artistId = (data as { artist_id?: string } | null)?.artist_id ?? null;
   }
 
-  const matches = artistId ? (await supabase.rpc("project_funding_matches", { target_artist: artistId })).data ?? [] : [];
-  const missing = matches.filter((m: { match_status?: string }) => m.match_status === "needs_info");
-  const todoItems = Array.from(new Map(missing.map((m: { project_id: string; project_name: string; provider_name: string; program_name: string; reason: string }) => [
-    m.project_id + ":" + m.provider_name,
-    { project: m.project_name, provider: m.provider_name, program: m.program_name, reason: m.reason }
-  ])).values()).slice(0, 5) as { project: string; provider: string; program: string; reason: string }[];
+  const projects=artistId?(await supabase.from("projects").select("id,name,organization_id").eq("artist_id",artistId).order("created_at",{ascending:false})).data??[]:[];
+  const todoCandidates:{project:string;provider:string;program:string;reason:string;impact:number}[]=[];
+  if(artistId) for(const project of projects){
+    const {data}=await supabase.rpc("evaluate_funding_eligibility_v23",{target_artist:artistId,target_project:project.id,target_organization:project.organization_id??null});
+    const grouped=new Map<string,{project:string;provider:string;program:string;reason:string;impact:number}>();
+    for(const row of data??[]){
+      if(!["missing_information","pending_context"].includes(row.criterion_status)||!row.blocking||row.criterion_kind!=="eligibility") continue;
+      const key=project.id+"|"+row.funding_program_id;
+      const current=grouped.get(key)??{project:project.name,provider:row.provider_name,program:row.program_name,reason:row.criterion_status==="pending_context"?"Contexte nécessaire pour déterminer la règle applicable.":"Une information nécessaire à l’éligibilité manque.",impact:0};
+      current.impact++; grouped.set(key,current);
+    }
+    todoCandidates.push(...grouped.values());
+  }
+  const todoItems=todoCandidates.sort((a,b)=>b.impact-a.impact).slice(0,5);
 
   return (
     <main className="mx-auto min-h-screen max-w-md bg-white px-5 pb-28 pt-8 shadow-sm">
@@ -76,7 +84,7 @@ export default async function Home() {
         ) : (
           <div className="mt-3 space-y-3">
             {todoItems.map((item, index) => (
-              <Link key={item.project + item.provider + index} href="/organizations" className="block rounded-xl bg-amber-50 p-3">
+              <Link key={item.project + item.provider + index} href="/funding" className="block rounded-xl bg-amber-50 p-3">
                 <p className="text-sm font-semibold">Compléter les informations pour {item.project}</p>
                 <p className="mt-1 text-xs text-neutral-600">{item.provider} · {item.program}</p>
                 <p className="mt-1 text-xs text-neutral-500">{item.reason}</p>
