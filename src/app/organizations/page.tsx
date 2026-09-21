@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, Building2, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createOrganization, deleteOrganization } from "./actions";
+import { createOrganization, deleteOrganization } from "./actions";\nimport { updateOrganizationFacts } from "./profile-actions";
 
 const organizationTypes = [
   ["association", "Association"],
@@ -30,7 +30,7 @@ export default async function OrganizationsPage({ searchParams }: { searchParams
   const organizations = access?.artist_id
     ? (await supabase
         .from("organizations")
-        .select("id,name,organization_type,siret,created_at")
+        .select("id,name,organization_type,siret,created_at,cnm_affiliated,sacem_affiliated,adami_affiliated,spedidam_affiliated,scpp_affiliated,sppf_affiliated,spectacle_licence,employs_artists,phonogram_producer,owns_masters,founded_on,admin_notes")
         .eq("artist_id", access.artist_id)
         .order("created_at", { ascending: false })).data ?? []
     : [];
@@ -88,7 +88,17 @@ export default async function OrganizationsPage({ searchParams }: { searchParams
                     </button>
                   </form>
                 </div>
-              </article>
+              <form action={updateOrganizationFacts} className="mt-4 border-t border-neutral-100 pt-4">
+<input type="hidden" name="id" value={organization.id}/>
+<p className="text-sm font-semibold">Profil administratif</p>
+<p className="mt-1 text-xs text-neutral-500">Réponds seulement à ce que tu sais. « Je ne sais pas » reste une vraie information manquante.</p>
+<div className="mt-3 grid grid-cols-2 gap-2">
+<label className="text-xs">Affilié CNM<select name="cnm_affiliated" defaultValue={organization.cnm_affiliated===true?"yes":organization.cnm_affiliated===false?"no":""} className="mt-1 h-9 w-full rounded-lg border bg-white px-2"><option value="">Je ne sais pas</option><option value="yes">Oui</option><option value="no">Non</option></select></label><label className="text-xs">Affilié SACEM<select name="sacem_affiliated" defaultValue={organization.sacem_affiliated===true?"yes":organization.sacem_affiliated===false?"no":""} className="mt-1 h-9 w-full rounded-lg border bg-white px-2"><option value="">Je ne sais pas</option><option value="yes">Oui</option><option value="no">Non</option></select></label><label className="text-xs">Affilié ADAMI<select name="adami_affiliated" defaultValue={organization.adami_affiliated===true?"yes":organization.adami_affiliated===false?"no":""} className="mt-1 h-9 w-full rounded-lg border bg-white px-2"><option value="">Je ne sais pas</option><option value="yes">Oui</option><option value="no">Non</option></select></label><label className="text-xs">Affilié SPEDIDAM<select name="spedidam_affiliated" defaultValue={organization.spedidam_affiliated===true?"yes":organization.spedidam_affiliated===false?"no":""} className="mt-1 h-9 w-full rounded-lg border bg-white px-2"><option value="">Je ne sais pas</option><option value="yes">Oui</option><option value="no">Non</option></select></label><label className="text-xs">Affilié SCPP<select name="scpp_affiliated" defaultValue={organization.scpp_affiliated===true?"yes":organization.scpp_affiliated===false?"no":""} className="mt-1 h-9 w-full rounded-lg border bg-white px-2"><option value="">Je ne sais pas</option><option value="yes">Oui</option><option value="no">Non</option></select></label><label className="text-xs">Affilié SPPF<select name="sppf_affiliated" defaultValue={organization.sppf_affiliated===true?"yes":organization.sppf_affiliated===false?"no":""} className="mt-1 h-9 w-full rounded-lg border bg-white px-2"><option value="">Je ne sais pas</option><option value="yes">Oui</option><option value="no">Non</option></select></label><label className="text-xs">Licence spectacle<select name="spectacle_licence" defaultValue={organization.spectacle_licence===true?"yes":organization.spectacle_licence===false?"no":""} className="mt-1 h-9 w-full rounded-lg border bg-white px-2"><option value="">Je ne sais pas</option><option value="yes">Oui</option><option value="no">Non</option></select></label><label className="text-xs">Emploie les artistes<select name="employs_artists" defaultValue={organization.employs_artists===true?"yes":organization.employs_artists===false?"no":""} className="mt-1 h-9 w-full rounded-lg border bg-white px-2"><option value="">Je ne sais pas</option><option value="yes">Oui</option><option value="no">Non</option></select></label><label className="text-xs">Producteur phonographique<select name="phonogram_producer" defaultValue={organization.phonogram_producer===true?"yes":organization.phonogram_producer===false?"no":""} className="mt-1 h-9 w-full rounded-lg border bg-white px-2"><option value="">Je ne sais pas</option><option value="yes">Oui</option><option value="no">Non</option></select></label><label className="text-xs">Détient les masters<select name="owns_masters" defaultValue={organization.owns_masters===true?"yes":organization.owns_masters===false?"no":""} className="mt-1 h-9 w-full rounded-lg border bg-white px-2"><option value="">Je ne sais pas</option><option value="yes">Oui</option><option value="no">Non</option></select></label>
+</div>
+<label className="mt-3 block text-xs">Date de création<input name="founded_on" type="date" defaultValue={organization.founded_on??""} className="mt-1 h-9 w-full rounded-lg border px-2"/></label>
+<label className="mt-3 block text-xs">Notes administratives<textarea name="admin_notes" defaultValue={organization.admin_notes??""} rows={2} className="mt-1 w-full rounded-lg border p-2"/></label>
+<button className="mt-3 h-10 w-full rounded-xl bg-neutral-900 text-sm font-semibold text-white">Enregistrer le profil administratif</button>
+</form></article>
             ))}
           </div>
         )}
