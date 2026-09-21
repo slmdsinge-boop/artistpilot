@@ -60,6 +60,30 @@ export async function updateFundingStatus(formData:FormData){
  revalidatePath("/funding"); revalidatePath("/"); redirect("/funding?status_updated=1");
 }
 
+
+export async function updateFundingApplicationDetails(formData:FormData){
+ const applicationId=String(formData.get("application_id")??"").trim();
+ if(!applicationId) redirect("/funding?error=invalid_application");
+ const {supabase,artistId}=await context();
+ const {data:application}=await supabase.from("funding_applications").select("id").eq("id",applicationId).eq("artist_id",artistId).maybeSingle();
+ if(!application) redirect("/funding?error=invalid_application");
+ const parseAmount=(name:string)=>{
+  const raw=String(formData.get(name)??"").trim().replace(",",".");
+  if(!raw) return null;
+  const value=Number(raw);
+  if(!Number.isFinite(value)||value<0) return undefined;
+  return Math.round(value*100)/100;
+ };
+ const requested=parseAmount("requested_amount_eur");
+ const awarded=parseAmount("awarded_amount_eur");
+ if(requested===undefined||awarded===undefined) redirect("/funding?error=invalid_amount");
+ const notesRaw=String(formData.get("notes")??"").trim();
+ const notes=notesRaw?notesRaw.slice(0,5000):null;
+ const {error}=await supabase.from("funding_applications").update({requested_amount_eur:requested,awarded_amount_eur:awarded,notes}).eq("id",applicationId).eq("artist_id",artistId);
+ if(error) redirect("/funding?error=application_update_failed");
+ revalidatePath("/funding"); revalidatePath("/"); redirect("/funding?application_updated=1");
+}
+
 export async function saveEligibilityFact(formData:FormData){
  const subjectType=String(formData.get("subject_type")??"");
  const subjectId=String(formData.get("subject_id")??"");
