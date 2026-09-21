@@ -54,9 +54,14 @@ export default async function Home() {
   const projects=artistId?(await supabase.from("projects").select("id,name,organization_id").eq("artist_id",artistId).order("created_at",{ascending:false})).data??[]:[];
   const todoCandidates:{project:string;provider:string;program:string;reason:string;impact:number}[]=[];
   if(artistId) for(const project of projects){
-    const {data}=await supabase.rpc("evaluate_funding_eligibility_v23",{target_artist:artistId,target_project:project.id,target_organization:project.organization_id??null});
+    const [{data},{data:readiness}]=await Promise.all([
+      supabase.rpc("evaluate_funding_eligibility_v23",{target_artist:artistId,target_project:project.id,target_organization:project.organization_id??null}),
+      supabase.rpc("funding_program_readiness",{target_artist:artistId,target_project:project.id})
+    ]);
+    const readyPrograms=new Set((readiness??[]).filter((r:any)=>r.readiness_status==="ready").map((r:any)=>r.funding_program_id));
     const grouped=new Map<string,{project:string;provider:string;program:string;reason:string;impact:number}>();
     for(const row of data??[]){
+      if(!readyPrograms.has(row.funding_program_id)) continue;
       if(!["missing_information","pending_context"].includes(row.criterion_status)||!row.blocking||row.criterion_kind!=="eligibility") continue;
       const key=project.id+"|"+row.funding_program_id;
       const current=grouped.get(key)??{project:project.name,provider:row.provider_name,program:row.program_name,reason:row.criterion_status==="pending_context"?"Contexte nécessaire pour déterminer la règle applicable.":"Une information nécessaire à l’éligibilité manque.",impact:0};
@@ -80,7 +85,7 @@ export default async function Home() {
       <section className="mb-7 rounded-2xl border border-neutral-200 p-4">
         <div className="flex items-center gap-2"><Bell size={18}/><h2 className="font-semibold">À FAIRE</h2></div>
         {todoItems.length === 0 ? (
-          <p className="mt-3 text-sm text-neutral-600">Aucune information manquante détectée pour les financements analysés.</p>
+          <p className="mt-3 text-sm text-neutral-600">Aucune information utilisateur prioritaire à compléter pour les dispositifs actuellement vérifiés.</p>
         ) : (
           <div className="mt-3 space-y-3">
             {todoItems.map((item, index) => (
