@@ -21,6 +21,11 @@ export async function trackFunding(formData:FormData){
  if(projectId&&organizationId&&projectOrganizationId&&organizationId!==projectOrganizationId) redirect("/funding?error=project_organization_mismatch");
  const {data:program}=await supabase.from("funding_programs").select("id,verification_status,deadline_date").eq("id",programId).maybeSingle();
  if(!program||program.verification_status!=="verified") redirect("/funding?error=program_not_verified");
+ if(projectId){
+  const {data:readiness}=await supabase.rpc("funding_program_readiness",{target_artist:artistId,target_project:projectId});
+  const programReadiness=(readiness??[]).find((r:any)=>r.funding_program_id===programId);
+  if(!programReadiness||programReadiness.readiness_status!=="ready") redirect("/funding?error=program_not_ready");
+ }
  const today=new Date().toISOString().slice(0,10);
  if(program.deadline_date&&program.deadline_date<today) redirect("/funding?error=program_closed");
  let existingQuery=supabase.from("funding_applications").select("id").eq("artist_id",artistId).eq("funding_program_id",programId);
