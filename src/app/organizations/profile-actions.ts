@@ -18,9 +18,9 @@ export async function updateOrganizationFacts(formData:FormData){
  };
  const {error}=await supabase.from("organizations").update(payload).eq("id",id).eq("artist_id",access.artist_id);
  if(error) redirect("/organizations?error=save_failed");
- await syncOrganizationEligibilityFacts(id,{
+ try { await syncOrganizationEligibilityFacts(id,{
   cnm_affiliated:payload.cnm_affiliated,sacem_affiliated:payload.sacem_affiliated,sppf_affiliated:payload.sppf_affiliated,
   phonogram_producer:payload.phonogram_producer,owns_masters:payload.owns_masters,employs_artists:payload.employs_artists
- });
+ }); } catch { redirect("/organizations?error=fact_sync_failed"); }
  revalidatePath("/organizations");revalidatePath("/funding");revalidatePath("/");redirect("/organizations?saved=1");
 }
