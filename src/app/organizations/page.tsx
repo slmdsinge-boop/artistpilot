@@ -60,7 +60,8 @@ export default async function OrganizationsPage({ searchParams }: { searchParams
         <p className="mt-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           {error === "missing_fields" ? "Le nom et le type de structure sont obligatoires." :
            error === "invalid_siret" ? "Le SIRET doit contenir exactement 14 chiffres." :
-           "Impossible d’enregistrer la structure. " + error}
+           error === "save_failed" ? "Impossible d’enregistrer cette modification pour le moment." :
+           "Impossible d’enregistrer cette modification pour le moment."}
         </p>
       )}
 
