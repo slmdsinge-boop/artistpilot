@@ -79,7 +79,7 @@ export default async function Home() {
     if(a.status==="submitted"&&a.submitted_at){const waitingDays=Math.floor((new Date(today+"T12:00:00").getTime()-new Date(a.submitted_at+"T12:00:00").getTime())/86400000);if(waitingDays>=60)return [{project:pr?.name??"Dossier",provider:fp?.provider_name??"Financement",program:fp?.name??"Dispositif",reason:`Dossier déposé depuis ${waitingDays} jours sans décision enregistrée. Vérifie son avancement.`,impact:500+waitingDays,href:"/funding"}];}
     return [];
   });
-  const todoItems=Array.from([...fundingTodos,...incompleteFundingTodos,...todoCandidates].reduce((map,item)=>{const key=`${item.project}::${item.provider}::${item.program}`;const current=map.get(key);if(!current||item.impact>current.impact)map.set(key,item);return map;},new Map<string,{project:string;provider:string;program:string;reason:string;impact:number;href?:string}>()).values()).sort((a,b)=>b.impact-a.impact).slice(0,5);
+  const allTodoItems=Array.from([...fundingTodos,...incompleteFundingTodos,...todoCandidates].reduce((map,item)=>{const key=`${item.project}::${item.provider}::${item.program}`;const current=map.get(key);if(!current||item.impact>current.impact)map.set(key,item);return map;},new Map<string,{project:string;provider:string;program:string;reason:string;impact:number;href?:string}>()).values()).sort((a,b)=>b.impact-a.impact);\n  const todoItems=allTodoItems.slice(0,5);\n  const remainingTodoCount=Math.max(0,allTodoItems.length-5);
 
   return (
     <main className="mx-auto min-h-screen max-w-md bg-white px-5 pb-28 pt-8 shadow-sm">
@@ -107,7 +107,7 @@ export default async function Home() {
             ))}
           </div>
         )}
-      </section>
+              {remainingTodoCount>0&&<Link href="/funding" className="mt-3 block text-center text-xs font-semibold underline">Voir {remainingTodoCount} autre{remainingTodoCount>1?"s":""} action{remainingTodoCount>1?"s":""}</Link>}\n      </section>
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">Cockpit</h2>
