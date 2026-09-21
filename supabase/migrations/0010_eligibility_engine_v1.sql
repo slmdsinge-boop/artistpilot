@@ -8,7 +8,7 @@ returns table (
 )
 language sql security invoker set search_path=public as $$
 with base as (
- select p.*, f.id fid, f.provider_name fp, f.name fn, f.official_url fu, f.verification_status fv,
+ select p.*, f.id fid, f.provider_name fp, f.name fn, f.official_url fu, f.verification_status fv, f.project_types,
         o.cnm_affiliated,o.adami_affiliated,o.spedidam_affiliated,o.sppf_affiliated,
         o.spectacle_licence,o.employs_artists,o.phonogram_producer,o.owns_masters
  from projects p cross join funding_programs f
