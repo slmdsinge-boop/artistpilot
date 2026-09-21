@@ -1,12 +1,13 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { CircleDollarSign, Music2, CalendarDays, FolderOpen, Bell, FolderKanban, Building2, UserRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { UniversalAdd } from "@/components/universal-add";
 
 const modules = [
-  ["Projets", FolderKanban], ["Financements", CircleDollarSign],
-  ["Œuvres & droits", Music2], ["Concerts", CalendarDays],
-  ["Documents", FolderOpen], ["Organisations", Building2],
+  ["Projets", FolderKanban, null], ["Financements", CircleDollarSign, null],
+  ["Œuvres & droits", Music2, null], ["Concerts", CalendarDays, null],
+  ["Documents", FolderOpen, null], ["Organisations", Building2, "/organizations"],
 ] as const;
 
 export default async function Home() {
@@ -67,10 +68,14 @@ export default async function Home() {
       <section>
         <h2 className="mb-3 text-lg font-semibold">Cockpit</h2>
         <div className="grid grid-cols-2 gap-3">
-          {modules.map(([label, Icon]) => (
-            <button key={label} className="min-h-28 rounded-2xl border border-neutral-200 p-4 text-left transition active:scale-[.98]">
+          {modules.map(([label, Icon, href]) => href ? (
+            <Link key={label} href={href} className="min-h-28 rounded-2xl border border-neutral-200 p-4 text-left transition active:scale-[.98]">
               <Icon size={22}/><span className="mt-5 block font-medium">{label}</span>
-            </button>
+            </Link>
+          ) : (
+            <div key={label} className="min-h-28 rounded-2xl border border-neutral-200 p-4 text-left text-neutral-500">
+              <Icon size={22}/><span className="mt-5 block font-medium">{label}</span>
+            </div>
           ))}
         </div>
       </section>
