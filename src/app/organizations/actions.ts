@@ -68,6 +68,7 @@ export async function deleteOrganization(formData: FormData) {
 
   const { supabase, artistId } = await requireUserAndArtist();
   const { error } = await supabase.from("organizations").delete().eq("id", id).eq("artist_id", artistId);
+  if (error?.code === "23503") redirect("/organizations?error=organization_in_use");
   if (error) redirect("/organizations?error=save_failed");
 
   revalidatePath("/organizations");
