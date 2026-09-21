@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Building2, Trash2 } from "lucide-react";
+import { ArrowLeft, Building2 } from "lucide-react";
+import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { createClient } from "@/lib/supabase/server";
 import { createOrganization, deleteOrganization } from "./actions";
 import { updateOrganizationFacts } from "./profile-actions";
@@ -85,9 +86,7 @@ export default async function OrganizationsPage({ searchParams }: { searchParams
                   </div>
                   <form action={deleteOrganization}>
                     <input type="hidden" name="id" value={organization.id}/>
-                    <button aria-label="Supprimer la structure" className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-100 hover:text-red-600">
-                      <Trash2 size={18}/>
-                    </button>
+                    <ConfirmDeleteButton label="Supprimer la structure" message="Supprimer cette structure ? Cette action est définitive." />
                   </form>
                 </div>
               <form action={updateOrganizationFacts} className="mt-4 border-t border-neutral-100 pt-4">
