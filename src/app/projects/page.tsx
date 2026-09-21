@@ -6,7 +6,7 @@ import { createProject, deleteProject, updateProjectFundingFacts, updateProjectO
 
 const projectTypes = [
   ["album","Album"],["ep","EP"],["single","Single"],["clip","Clip"],
-  ["tournee","Tournée"],["spectacle","Spectacle"],["residence","Résidence"],["autre","Autre"],
+  ["tournee","Tournée"],["spectacle","Spectacle"],["festival","Festival"],["residence","Résidence"],["autre","Autre"],
 ] as const;
 const statuses = [["idea","Idée"],["preparation","Préparation"],["active","En cours"],["completed","Terminé"],["paused","En pause"]] as const;
 type SearchParams = Promise<Record<string,string|string[]|undefined>>;
