@@ -52,31 +52,31 @@ export default async function Home() {
   }
 
   const projects=artistId?(await supabase.from("projects").select("id,name,organization_id").eq("artist_id",artistId).order("created_at",{ascending:false})).data??[]:[];
-  const todoCandidates:{project:string;provider:string;program:string;reason:string;impact:number;href?:string}[]=[];
+  const todoCandidates:{project:string;provider:string;program:string;reason:string;impact:number;href?:string;kind?:string}[]=[];
   if(artistId) for(const project of projects){
     const [{data},{data:readiness}]=await Promise.all([
       supabase.rpc("evaluate_funding_eligibility_v23",{target_artist:artistId,target_project:project.id,target_organization:project.organization_id??null}),
       supabase.rpc("funding_program_readiness",{target_artist:artistId,target_project:project.id})
     ]);
     const readyPrograms=new Set((readiness??[]).filter((r:any)=>r.readiness_status==="ready").map((r:any)=>r.funding_program_id));
-    const grouped=new Map<string,{project:string;provider:string;program:string;reason:string;impact:number;href?:string}>();
+    const grouped=new Map<string,{project:string;provider:string;program:string;reason:string;impact:number;href?:string;kind?:string}>();
     for(const row of data??[]){
       if(!readyPrograms.has(row.funding_program_id)) continue;
       if(!["missing_information","pending_context"].includes(row.criterion_status)||!row.blocking||row.criterion_kind!=="eligibility") continue;
       const key=project.id+"|"+row.funding_program_id;
-      const current=grouped.get(key)??{project:project.name,provider:row.provider_name,program:row.program_name,reason:row.criterion_status==="pending_context"?"Contexte nécessaire pour déterminer la règle applicable.":"Une information nécessaire à l’éligibilité manque.",impact:0,href:"/funding"};
+      const current=grouped.get(key)??{project:project.name,provider:row.provider_name,program:row.program_name,reason:row.criterion_status==="pending_context"?"Contexte nécessaire pour déterminer la règle applicable.":"Une information nécessaire à l’éligibilité manque.",impact:0,href:"/funding",kind:"eligibility"};
       current.impact++; grouped.set(key,current);
     }
     todoCandidates.push(...grouped.values());
   }
   const fundingApplications=artistId?(await supabase.from("funding_applications").select("id,status,requested_amount_eur,awarded_amount_eur,submitted_at,decision_at,funding_programs(name,provider_name,deadline_date),projects(name)").eq("artist_id",artistId).order("updated_at",{ascending:false})).data??[]:[];
   const fundingSummary=fundingApplications.reduce((acc:any,a:any)=>{if(a.status==="submitted")acc.pending++;if(a.status==="awarded"){acc.awardedCount++;acc.awarded+=Number(a.awarded_amount_eur??0);}return acc;},{pending:0,awardedCount:0,awarded:0});\n  const today=new Date().toISOString().slice(0,10);
-  const incompleteFundingTodos=fundingApplications.flatMap((a:any)=>{const fp=a.funding_programs as {name?:string;provider_name?:string}|null;const pr=a.projects as {name?:string}|null;const missing:string[]=[];if(["submitted","awarded","rejected"].includes(a.status)&&!a.submitted_at)missing.push("date de dépôt");if(["awarded","rejected"].includes(a.status)&&!a.decision_at)missing.push("date de décision");if(a.status==="awarded"&&a.awarded_amount_eur===null)missing.push("montant accordé");return missing.length?[{project:pr?.name??"Dossier",provider:fp?.provider_name??"Financement",program:fp?.name??"Dispositif",reason:`Information${missing.length>1?"s":""} obligatoire${missing.length>1?"s":""} manquante${missing.length>1?"s":""} : ${missing.join(", ")}.`,impact:1600+missing.length,href:"/funding"}]:[];});\n  const fundingTodos=fundingApplications.flatMap((a:any)=>{
+  const incompleteFundingTodos=fundingApplications.flatMap((a:any)=>{const fp=a.funding_programs as {name?:string;provider_name?:string}|null;const pr=a.projects as {name?:string}|null;const missing:string[]=[];if(["submitted","awarded","rejected"].includes(a.status)&&!a.submitted_at)missing.push("date de dépôt");if(["awarded","rejected"].includes(a.status)&&!a.decision_at)missing.push("date de décision");if(a.status==="awarded"&&a.awarded_amount_eur===null)missing.push("montant accordé");return missing.length?[{project:pr?.name??"Dossier",provider:fp?.provider_name??"Financement",program:fp?.name??"Dispositif",reason:`Information${missing.length>1?"s":""} obligatoire${missing.length>1?"s":""} manquante${missing.length>1?"s":""} : ${missing.join(", ")}.`,impact:1600+missing.length,href:"/funding",kind:"incomplete"}]:[];});\n  const fundingTodos=fundingApplications.flatMap((a:any)=>{
     const fp=a.funding_programs as {name?:string;provider_name?:string;deadline_date?:string}|null;
     const pr=a.projects as {name?:string}|null;
     const days=fp?.deadline_date?Math.ceil((new Date(fp.deadline_date+"T12:00:00").getTime()-new Date(today+"T12:00:00").getTime())/86400000):null;
-    if(["identified","to_check","preparing"].includes(a.status)&&days!==null&&days<0) return [{project:pr?.name??"Dossier",provider:fp?.provider_name??"Financement",program:fp?.name??"Dispositif",reason:`Échéance dépassée depuis ${Math.abs(days)} jour${Math.abs(days)>1?"s":""}. Mets à jour le dossier si la demande n’a pas été déposée.`,impact:2000+Math.abs(days),href:"/funding"}];\n    if(["identified","to_check","preparing"].includes(a.status)&&days!==null&&days>=0&&days<=30) return [{project:pr?.name??"Dossier",provider:fp?.provider_name??"Financement",program:fp?.name??"Dispositif",reason:days===0?"Échéance de dépôt aujourd’hui.":`Échéance de dépôt dans ${days} jour${days>1?"s":""}.`,impact:1000-days,href:"/funding"}];
-    if(a.status==="submitted"&&a.submitted_at){const waitingDays=Math.floor((new Date(today+"T12:00:00").getTime()-new Date(a.submitted_at+"T12:00:00").getTime())/86400000);if(waitingDays>=60)return [{project:pr?.name??"Dossier",provider:fp?.provider_name??"Financement",program:fp?.name??"Dispositif",reason:`Dossier déposé depuis ${waitingDays} jours sans décision enregistrée. Vérifie son avancement.`,impact:500+waitingDays,href:"/funding"}];}
+    if(["identified","to_check","preparing"].includes(a.status)&&days!==null&&days<0) return [{project:pr?.name??"Dossier",provider:fp?.provider_name??"Financement",program:fp?.name??"Dispositif",reason:`Échéance dépassée depuis ${Math.abs(days)} jour${Math.abs(days)>1?"s":""}. Mets à jour le dossier si la demande n’a pas été déposée.`,impact:2000+Math.abs(days),href:"/funding",kind:"overdue"}];\n    if(["identified","to_check","preparing"].includes(a.status)&&days!==null&&days>=0&&days<=30) return [{project:pr?.name??"Dossier",provider:fp?.provider_name??"Financement",program:fp?.name??"Dispositif",reason:days===0?"Échéance de dépôt aujourd’hui.":`Échéance de dépôt dans ${days} jour${days>1?"s":""}.`,impact:1000-days,href:"/funding",kind:"deadline"}];
+    if(a.status==="submitted"&&a.submitted_at){const waitingDays=Math.floor((new Date(today+"T12:00:00").getTime()-new Date(a.submitted_at+"T12:00:00").getTime())/86400000);if(waitingDays>=60)return [{project:pr?.name??"Dossier",provider:fp?.provider_name??"Financement",program:fp?.name??"Dispositif",reason:`Dossier déposé depuis ${waitingDays} jours sans décision enregistrée. Vérifie son avancement.`,impact:500+waitingDays,href:"/funding",kind:"waiting"}];}
     return [];
   });
   const allTodoItems=Array.from([...fundingTodos,...incompleteFundingTodos,...todoCandidates].reduce((map,item)=>{const key=`${item.project}::${item.provider}::${item.program}`;const current=map.get(key);if(!current||item.impact>current.impact)map.set(key,item);return map;},new Map<string,{project:string;provider:string;program:string;reason:string;impact:number;href?:string}>()).values()).sort((a,b)=>b.impact-a.impact);\n  const todoItems=allTodoItems.slice(0,5);\n  const remainingTodoCount=Math.max(0,allTodoItems.length-5);
@@ -100,7 +100,7 @@ export default async function Home() {
           <div className="mt-3 space-y-3">
             {todoItems.map((item, index) => (
               <Link key={item.project + item.provider + index} href={item.href??"/funding"} className="block rounded-xl bg-amber-50 p-3">
-                <p className="text-sm font-semibold">Compléter les informations pour {item.project}</p>
+                <p className="text-sm font-semibold">{item.kind==="overdue"?`Échéance dépassée — ${item.project}`:item.kind==="deadline"?`Échéance proche — ${item.project}`:item.kind==="waiting"?`Décision à vérifier — ${item.project}`:item.kind==="incomplete"?`Dossier à compléter — ${item.project}`:`Compléter les informations pour ${item.project}`}</p>
                 <p className="mt-1 text-xs text-neutral-600">{item.provider} · {item.program}</p>
                 <p className="mt-1 text-xs text-neutral-500">{item.reason}</p>
               </Link>
