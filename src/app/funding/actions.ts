@@ -83,6 +83,7 @@ export async function updateFundingApplicationDetails(formData:FormData){
  const decisionAtRaw=String(formData.get("decision_at")??"").trim();
  const validDate=(value:string)=>!value||/^\\d{4}-\\d{2}-\\d{2}$/.test(value);
  if(!validDate(submittedAtRaw)||!validDate(decisionAtRaw)) redirect("/funding?error=invalid_date");
+ if(submittedAtRaw&&decisionAtRaw&&decisionAtRaw<submittedAtRaw) redirect("/funding?error=decision_before_submission");
  const {error}=await supabase.from("funding_applications").update({requested_amount_eur:requested,awarded_amount_eur:awarded,submitted_at:submittedAtRaw||null,decision_at:decisionAtRaw||null,notes}).eq("id",applicationId).eq("artist_id",artistId);
  if(error) redirect("/funding?error=application_update_failed");
  revalidatePath("/funding"); revalidatePath("/"); redirect("/funding?application_updated=1");
