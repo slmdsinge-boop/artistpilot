@@ -41,6 +41,7 @@ export async function deleteProject(formData: FormData) {
   const id=String(formData.get("id")??""); if(!id) redirect("/projects");
   const {supabase,artistId}=await requireContext();
   const {error}=await supabase.from("projects").delete().eq("id",id).eq("artist_id",artistId);
+  if(error?.code==="23503") redirect("/projects?error=project_in_use");
   if(error) redirect("/projects?error=save_failed");
   revalidatePath("/projects"); redirect("/projects?deleted=1");
 }
