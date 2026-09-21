@@ -44,8 +44,11 @@ export async function saveEligibilityFact(formData:FormData){
 
  const {data:def}=await supabase.from("fact_definitions").select("subject_type,value_type,options").eq("fact_key",factKey).maybeSingle();
  if(!def||def.subject_type!==subjectType) redirect("/funding?error=invalid_fact_definition");
- const {data:criterion}=await supabase.from("funding_criteria").select("id").eq("criterion_key",factKey).eq("subject_type",subjectType).eq("verification_status","verified").limit(1).maybeSingle();
- if(!criterion) redirect("/funding?error=unverified_fact");
+ const {data:criteria}=await supabase.from("funding_criteria").select("id,funding_program_id").eq("criterion_key",factKey).eq("subject_type",subjectType).eq("verification_status","verified");
+ if(!criteria?.length) redirect("/funding?error=unverified_fact");
+ const programIds=[...new Set(criteria.map(c=>c.funding_program_id))];
+ const {data:verifiedPrograms}=await supabase.from("funding_programs").select("id").in("id",programIds).eq("verification_status","verified");
+ if(!verifiedPrograms?.length) redirect("/funding?error=unverified_fact");
 
  if(subjectType==="project"){const {data}=await supabase.from("projects").select("id").eq("id",subjectId).eq("artist_id",artistId).maybeSingle();if(!data) redirect("/funding?error=invalid_project");}
  if(subjectType==="organization"){const {data}=await supabase.from("organizations").select("id").eq("id",subjectId).eq("artist_id",artistId).maybeSingle();if(!data) redirect("/funding?error=invalid_organization");}
