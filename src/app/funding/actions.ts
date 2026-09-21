@@ -93,8 +93,10 @@ export async function clearEligibilityFact(formData:FormData){
  if(subjectType==="organization"){const {data}=await supabase.from("organizations").select("id").eq("id",subjectId).eq("artist_id",artistId).maybeSingle();if(!data) redirect("/funding?error=invalid_organization");}
  if(subjectType==="artist"&&subjectId!==artistId) redirect("/funding?error=invalid_artist");
  if(subjectType==="application"){const {data}=await supabase.from("funding_applications").select("id").eq("id",subjectId).eq("artist_id",artistId).maybeSingle();if(!data) redirect("/funding?error=invalid_application");}
- const {data:fact}=await supabase.from("entity_facts").select("id,confirmation_status").eq("artist_id",artistId).eq("subject_type",subjectType).eq("subject_id",subjectId).eq("fact_key",factKey).maybeSingle();
+ const {data:fact}=await supabase.from("entity_facts").select("id,confirmation_status,source_note").eq("artist_id",artistId).eq("subject_type",subjectType).eq("subject_id",subjectId).eq("fact_key",factKey).maybeSingle();
  if(fact?.confirmation_status==="document_confirmed") redirect("/funding?error=document_confirmed_fact");
+ if(fact?.confirmation_status==="derived") redirect("/funding?error=derived_fact");
+ if(fact?.source_note==="Synchronisé depuis le profil de la structure") redirect("/funding?error=managed_organization_fact");
  if(fact){const {error}=await supabase.from("entity_facts").delete().eq("id",fact.id);if(error) redirect("/funding?error=fact_clear_failed");}
  revalidatePath("/funding"); revalidatePath("/"); redirect("/funding?fact_cleared=1");
 }
