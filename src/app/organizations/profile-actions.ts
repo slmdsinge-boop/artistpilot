@@ -17,7 +17,7 @@ export async function updateOrganizationFacts(formData:FormData){
   founded_on:String(formData.get("founded_on")??"")||null,admin_notes:String(formData.get("admin_notes")??"").trim()||null,updated_at:new Date().toISOString()
  };
  const {error}=await supabase.from("organizations").update(payload).eq("id",id).eq("artist_id",access.artist_id);
- if(error) redirect(`/organizations?error=${encodeURIComponent(error.message)}`);
+ if(error) redirect("/organizations?error=save_failed");
  await syncOrganizationEligibilityFacts(id,{
   cnm_affiliated:payload.cnm_affiliated,sacem_affiliated:payload.sacem_affiliated,sppf_affiliated:payload.sppf_affiliated,
   phonogram_producer:payload.phonogram_producer,owns_masters:payload.owns_masters,employs_artists:payload.employs_artists
