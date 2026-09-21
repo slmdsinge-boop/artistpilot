@@ -15,9 +15,15 @@ export async function trackFunding(formData:FormData){
  const organizationId=String(formData.get("organization_id")??"")||null;
  if(!programId) redirect("/funding?error=missing_program");
  const {supabase,artistId}=await context();
- if(projectId){const {data}=await supabase.from("projects").select("id").eq("id",projectId).eq("artist_id",artistId).maybeSingle();if(!data) redirect("/funding?error=invalid_project");}
+ let projectOrganizationId:string|null=null;
+ if(projectId){const {data}=await supabase.from("projects").select("id,organization_id").eq("id",projectId).eq("artist_id",artistId).maybeSingle();if(!data) redirect("/funding?error=invalid_project");projectOrganizationId=data.organization_id??null;}
  if(organizationId){const {data}=await supabase.from("organizations").select("id").eq("id",organizationId).eq("artist_id",artistId).maybeSingle();if(!data) redirect("/funding?error=invalid_organization");}
- const {error}=await supabase.from("funding_applications").insert({artist_id:artistId,project_id:projectId,organization_id:organizationId,funding_program_id:programId,status:"to_check"});
+ if(projectId&&organizationId&&projectOrganizationId&&organizationId!==projectOrganizationId) redirect("/funding?error=project_organization_mismatch");
+ const {data:program}=await supabase.from("funding_programs").select("id,verification_status").eq("id",programId).maybeSingle();
+ if(!program||program.verification_status!=="verified") redirect("/funding?error=program_not_verified");
+ const {data:existing}=await supabase.from("funding_applications").select("id").eq("artist_id",artistId).eq("funding_program_id",programId).eq("project_id",projectId).limit(1).maybeSingle();
+ if(existing) redirect("/funding?error=already_tracked");
+ const {error}=await supabase.from("funding_applications").insert({artist_id:artistId,project_id:projectId,organization_id:organizationId??projectOrganizationId,funding_program_id:programId,status:"to_check"});
  if(error) redirect(`/funding?error=${encodeURIComponent(error.message)}`);
  revalidatePath("/funding"); redirect("/funding?tracked=1");
 }
