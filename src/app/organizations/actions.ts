@@ -66,8 +66,8 @@ export async function deleteOrganization(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) redirect("/organizations");
 
-  const { supabase } = await requireUserAndArtist();
-  const { error } = await supabase.from("organizations").delete().eq("id", id);
+  const { supabase, artistId } = await requireUserAndArtist();
+  const { error } = await supabase.from("organizations").delete().eq("id", id).eq("artist_id", artistId);
   if (error) redirect("/organizations?error=save_failed");
 
   revalidatePath("/organizations");
