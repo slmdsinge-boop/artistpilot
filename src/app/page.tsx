@@ -15,13 +15,6 @@ export default async function Home() {
   const hasKey = Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   if (!hasUrl || !hasKey) {
-    const matches = artistId ? (await supabase.rpc("project_funding_matches", { target_artist: artistId })).data ?? [] : [];
-  const missing = matches.filter((m: { match_status?: string }) => m.match_status === "needs_info");
-  const todoItems = Array.from(new Map(missing.map((m: { project_id: string; project_name: string; provider_name: string; program_name: string; reason: string }) => [
-    m.project_id + ":" + m.provider_name,
-    { project: m.project_name, provider: m.provider_name, program: m.program_name, reason: m.reason }
-  ])).values()).slice(0, 5) as { project: string; provider: string; program: string; reason: string }[];
-
   return (
       <main className="mx-auto min-h-screen max-w-md bg-white px-5 py-10">
         <p className="text-sm font-semibold text-neutral-500">ArtistPilot</p>
@@ -49,7 +42,7 @@ export default async function Home() {
   if (user) {
     const { data } = await supabase
       .from("user_artist_access")
-      .select("artist_profiles(name)")
+      .select("artist_id,artist_profiles(name)")
       .eq("user_id", user.id)
       .limit(1)
       .maybeSingle();
@@ -57,6 +50,13 @@ export default async function Home() {
     artistName = profile?.name ?? null;
     artistId = (data as { artist_id?: string } | null)?.artist_id ?? null;
   }
+
+  const matches = artistId ? (await supabase.rpc("project_funding_matches", { target_artist: artistId })).data ?? [] : [];
+  const missing = matches.filter((m: { match_status?: string }) => m.match_status === "needs_info");
+  const todoItems = Array.from(new Map(missing.map((m: { project_id: string; project_name: string; provider_name: string; program_name: string; reason: string }) => [
+    m.project_id + ":" + m.provider_name,
+    { project: m.project_name, provider: m.provider_name, program: m.program_name, reason: m.reason }
+  ])).values()).slice(0, 5) as { project: string; provider: string; program: string; reason: string }[];
 
   return (
     <main className="mx-auto min-h-screen max-w-md bg-white px-5 pb-28 pt-8 shadow-sm">
