@@ -68,3 +68,19 @@ export async function saveEligibilityFact(formData:FormData){
  if(error) redirect(`/funding?error=${encodeURIComponent(error.message)}`);
  revalidatePath("/funding"); revalidatePath("/"); redirect("/funding?fact_saved=1");
 }
+
+export async function clearEligibilityFact(formData:FormData){
+ const subjectType=String(formData.get("subject_type")??"");
+ const subjectId=String(formData.get("subject_id")??"");
+ const factKey=String(formData.get("fact_key")??"");
+ if(!["project","organization","artist","application"].includes(subjectType)||!subjectId||!factKey) redirect("/funding?error=invalid_fact");
+ const {supabase,artistId}=await context();
+ if(subjectType==="project"){const {data}=await supabase.from("projects").select("id").eq("id",subjectId).eq("artist_id",artistId).maybeSingle();if(!data) redirect("/funding?error=invalid_project");}
+ if(subjectType==="organization"){const {data}=await supabase.from("organizations").select("id").eq("id",subjectId).eq("artist_id",artistId).maybeSingle();if(!data) redirect("/funding?error=invalid_organization");}
+ if(subjectType==="artist"&&subjectId!==artistId) redirect("/funding?error=invalid_artist");
+ if(subjectType==="application"){const {data}=await supabase.from("funding_applications").select("id").eq("id",subjectId).eq("artist_id",artistId).maybeSingle();if(!data) redirect("/funding?error=invalid_application");}
+ const {data:fact}=await supabase.from("entity_facts").select("id,confirmation_status").eq("artist_id",artistId).eq("subject_type",subjectType).eq("subject_id",subjectId).eq("fact_key",factKey).maybeSingle();
+ if(fact?.confirmation_status==="document_confirmed") redirect("/funding?error=document_confirmed_fact");
+ if(fact){const {error}=await supabase.from("entity_facts").delete().eq("id",fact.id);if(error) redirect(`/funding?error=${encodeURIComponent(error.message)}`);}
+ revalidatePath("/funding"); revalidatePath("/"); redirect("/funding?fact_cleared=1");
+}
