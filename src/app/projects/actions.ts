@@ -33,7 +33,7 @@ export async function createProject(formData: FormData) {
   }
 
   const {error}=await supabase.from("projects").insert({artist_id:artistId,organization_id:organizationId,name,project_type:projectType,status,description,start_date:startDate,target_date:targetDate});
-  if(error) redirect(`/projects?error=${encodeURIComponent(error.message)}`);
+  if(error) redirect("/projects?error=save_failed");
   revalidatePath("/"); revalidatePath("/projects"); redirect("/projects?created=1");
 }
 
