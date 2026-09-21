@@ -86,13 +86,27 @@ export async function syncOrganizationEligibilityFacts(organizationId: string, v
 
   for (const [column, factKey] of eligibilityOrganizationFacts) {
     const value=values[column];
+    const { data: existing } = await supabase.from("entity_facts")
+      .select("id,confirmation_status,source_note")
+      .eq("artist_id",artistId).eq("subject_type","organization").eq("subject_id",organizationId).eq("fact_key",factKey)
+      .maybeSingle();
+
     if (value===null || value===undefined) {
-      await supabase.from("entity_facts").delete().eq("artist_id",artistId).eq("subject_type","organization").eq("subject_id",organizationId).eq("fact_key",factKey).eq("confirmation_status","derived");
+      // Clearing a profile field must not erase a stronger fact captured elsewhere.
+      if (existing?.source_note==="Synchronisé depuis le profil de la structure") {
+        await supabase.from("entity_facts").delete().eq("id",existing.id);
+      }
       continue;
     }
-    await supabase.from("entity_facts").upsert({
+
+    // A document-confirmed fact is stronger than a profile edit and must be preserved.
+    if (existing?.confirmation_status==="document_confirmed" && existing.source_note!=="Synchronisé depuis le profil de la structure") continue;
+
+    const payload={
       artist_id:artistId,subject_type:"organization",subject_id:organizationId,fact_key:factKey,
-      value,confirmation_status:"derived",source_note:"Synchronisé depuis le profil de la structure",confirmed_at:new Date().toISOString()
-    },{onConflict:"artist_id,subject_type,subject_id,fact_key"});
+      value,confirmation_status:"user_confirmed",source_note:"Synchronisé depuis le profil de la structure",confirmed_at:new Date().toISOString()
+    };
+    if(existing?.id) await supabase.from("entity_facts").update(payload).eq("id",existing.id);
+    else await supabase.from("entity_facts").insert(payload);
   }
 }
