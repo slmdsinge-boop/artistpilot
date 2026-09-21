@@ -76,7 +76,7 @@ export async function updateFundingApplicationDetails(formData:FormData){
  };
  const requested=parseAmount("requested_amount_eur");
  const awarded=parseAmount("awarded_amount_eur");
- if(requested===undefined||awarded===undefined) redirect("/funding?error=invalid_amount");
+ if(requested===undefined||awarded===undefined) redirect("/funding?error=invalid_amount");\n if(requested!==null&&awarded!==null&&awarded>requested) redirect("/funding?error=awarded_exceeds_requested");
  const notesRaw=String(formData.get("notes")??"").trim();
  const notes=notesRaw?notesRaw.slice(0,5000):null;
  const submittedAtRaw=String(formData.get("submitted_at")??"").trim();
