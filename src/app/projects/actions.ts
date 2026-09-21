@@ -86,3 +86,14 @@ export async function updateProjectFundingFacts(formData: FormData) {
   revalidatePath("/funding");
   redirect("/projects?updated=1");
 }
+
+export async function updateProjectOrganization(formData:FormData){
+ const id=String(formData.get("id")??"").trim();
+ const organizationId=String(formData.get("organization_id")??"").trim()||null;
+ if(!id) redirect("/projects");
+ const {supabase,artistId}=await requireContext();
+ if(organizationId){const {data}=await supabase.from("organizations").select("id").eq("id",organizationId).eq("artist_id",artistId).maybeSingle();if(!data) redirect("/projects?error=invalid_organization");}
+ const {error}=await supabase.from("projects").update({organization_id:organizationId}).eq("id",id).eq("artist_id",artistId);
+ if(error) redirect(`/projects?error=${encodeURIComponent(error.message)}`);
+ revalidatePath("/projects"); revalidatePath("/funding"); revalidatePath("/"); redirect("/projects?carrier_updated=1");
+}
