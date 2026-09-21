@@ -73,3 +73,26 @@ export async function deleteOrganization(formData: FormData) {
   revalidatePath("/organizations");
   redirect("/organizations?deleted=1");
 }
+
+const eligibilityOrganizationFacts = [
+  ["cnm_affiliated","cnm_affiliated"],["sacem_affiliated","sacem_affiliated"],["sppf_affiliated","sppf_affiliated"],
+  ["phonogram_producer","phonogram_producer"],["owns_masters","owns_masters"],["employs_artists","employs_artists"],
+] as const;
+
+export async function syncOrganizationEligibilityFacts(organizationId: string, values: Record<string, boolean | null>) {
+  const { supabase, artistId } = await requireUserAndArtist();
+  const { data: owned } = await supabase.from("organizations").select("id").eq("id", organizationId).eq("artist_id", artistId).maybeSingle();
+  if (!owned) throw new Error("Structure introuvable.");
+
+  for (const [column, factKey] of eligibilityOrganizationFacts) {
+    const value=values[column];
+    if (value===null || value===undefined) {
+      await supabase.from("entity_facts").delete().eq("artist_id",artistId).eq("subject_type","organization").eq("subject_id",organizationId).eq("fact_key",factKey).eq("confirmation_status","derived");
+      continue;
+    }
+    await supabase.from("entity_facts").upsert({
+      artist_id:artistId,subject_type:"organization",subject_id:organizationId,fact_key:factKey,
+      value,confirmation_status:"derived",source_note:"Synchronisé depuis le profil de la structure",confirmed_at:new Date().toISOString()
+    },{onConflict:"artist_id,subject_type,subject_id,fact_key"});
+  }
+}
