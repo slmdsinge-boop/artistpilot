@@ -69,7 +69,7 @@ export async function updateFundingApplicationDetails(formData:FormData){
  const applicationId=String(formData.get("application_id")??"").trim();
  if(!applicationId) redirect("/funding?error=invalid_application");
  const {supabase,artistId}=await context();
- const {data:application}=await supabase.from("funding_applications").select("id").eq("id",applicationId).eq("artist_id",artistId).maybeSingle();
+ const {data:application}=await supabase.from("funding_applications").select("id,status").eq("id",applicationId).eq("artist_id",artistId).maybeSingle();
  if(!application) redirect("/funding?error=invalid_application");
  const parseAmount=(name:string)=>{
   const raw=String(formData.get(name)??"").trim().replace(",",".");
@@ -88,6 +88,9 @@ export async function updateFundingApplicationDetails(formData:FormData){
  const validDate=(value:string)=>!value||/^\\d{4}-\\d{2}-\\d{2}$/.test(value);
  if(!validDate(submittedAtRaw)||!validDate(decisionAtRaw)) redirect("/funding?error=invalid_date");
  if(submittedAtRaw&&decisionAtRaw&&decisionAtRaw<submittedAtRaw) redirect("/funding?error=decision_before_submission");
+ if(["submitted","awarded","rejected"].includes(application.status)&&!submittedAtRaw) redirect("/funding?error=submitted_date_required_for_status");
+ if(["awarded","rejected"].includes(application.status)&&!decisionAtRaw) redirect("/funding?error=decision_date_required_for_status");
+ if(application.status==="awarded"&&awarded===null) redirect("/funding?error=awarded_amount_required_for_status");
  const {error}=await supabase.from("funding_applications").update({requested_amount_eur:requested,awarded_amount_eur:awarded,submitted_at:submittedAtRaw||null,decision_at:decisionAtRaw||null,notes}).eq("id",applicationId).eq("artist_id",artistId);
  if(error) redirect("/funding?error=application_update_failed");
  revalidatePath("/funding"); revalidatePath("/"); redirect("/funding?application_updated=1");
