@@ -15,7 +15,14 @@ export default async function Home() {
   const hasKey = Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   if (!hasUrl || !hasKey) {
-    return (
+    const matches = artistId ? (await supabase.rpc("project_funding_matches", { target_artist: artistId })).data ?? [] : [];
+  const missing = matches.filter((m: { match_status?: string }) => m.match_status === "needs_info");
+  const todoItems = Array.from(new Map(missing.map((m: { project_id: string; project_name: string; provider_name: string; program_name: string; reason: string }) => [
+    m.project_id + ":" + m.provider_name,
+    { project: m.project_name, provider: m.provider_name, program: m.program_name, reason: m.reason }
+  ])).values()).slice(0, 5) as { project: string; provider: string; program: string; reason: string }[];
+
+  return (
       <main className="mx-auto min-h-screen max-w-md bg-white px-5 py-10">
         <p className="text-sm font-semibold text-neutral-500">ArtistPilot</p>
         <h1 className="mt-2 text-2xl font-bold">Configuration Supabase incomplète</h1>
@@ -38,6 +45,7 @@ export default async function Home() {
   }
 
   let artistName: string | null = null;
+  let artistId: string | null = null;
   if (user) {
     const { data } = await supabase
       .from("user_artist_access")
@@ -47,6 +55,7 @@ export default async function Home() {
       .maybeSingle();
     const profile = data?.artist_profiles as unknown as { name?: string } | null;
     artistName = profile?.name ?? null;
+    artistId = (data as { artist_id?: string } | null)?.artist_id ?? null;
   }
 
   return (
@@ -62,7 +71,19 @@ export default async function Home() {
 
       <section className="mb-7 rounded-2xl border border-neutral-200 p-4">
         <div className="flex items-center gap-2"><Bell size={18}/><h2 className="font-semibold">À FAIRE</h2></div>
-        <p className="mt-3 text-sm text-neutral-600">Aucune action pour le moment. Les informations manquantes apparaîtront ici sans être inventées.</p>
+        {todoItems.length === 0 ? (
+          <p className="mt-3 text-sm text-neutral-600">Aucune information manquante détectée pour les financements analysés.</p>
+        ) : (
+          <div className="mt-3 space-y-3">
+            {todoItems.map((item, index) => (
+              <Link key={item.project + item.provider + index} href="/organizations" className="block rounded-xl bg-amber-50 p-3">
+                <p className="text-sm font-semibold">Compléter les informations pour {item.project}</p>
+                <p className="mt-1 text-xs text-neutral-600">{item.provider} · {item.program}</p>
+                <p className="mt-1 text-xs text-neutral-500">{item.reason}</p>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
       <section>
