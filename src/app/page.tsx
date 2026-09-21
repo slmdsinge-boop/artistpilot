@@ -69,7 +69,16 @@ export default async function Home() {
     }
     todoCandidates.push(...grouped.values());
   }
-  const todoItems=todoCandidates.sort((a,b)=>b.impact-a.impact).slice(0,5);
+  const fundingApplications=artistId?(await supabase.from("funding_applications").select("id,status,submitted_at,decision_at,funding_programs(name,provider_name,deadline_date),projects(name)").eq("artist_id",artistId).order("updated_at",{ascending:false})).data??[]:[];
+  const today=new Date().toISOString().slice(0,10);
+  const fundingTodos=fundingApplications.flatMap((a:any)=>{
+    const fp=a.funding_programs as {name?:string;provider_name?:string;deadline_date?:string}|null;
+    const pr=a.projects as {name?:string}|null;
+    const days=fp?.deadline_date?Math.ceil((new Date(fp.deadline_date+"T12:00:00").getTime()-new Date(today+"T12:00:00").getTime())/86400000):null;
+    if(["identified","to_check","preparing"].includes(a.status)&&days!==null&&days>=0&&days<=30) return [{project:pr?.name??"Dossier",provider:fp?.provider_name??"Financement",program:fp?.name??"Dispositif",reason:days===0?"Échéance de dépôt aujourd’hui.":`Échéance de dépôt dans ${days} jour${days>1?"s":""}.`,impact:1000-days}];
+    return [];
+  });
+  const todoItems=[...fundingTodos,...todoCandidates].sort((a,b)=>b.impact-a.impact).slice(0,5);
 
   return (
     <main className="mx-auto min-h-screen max-w-md bg-white px-5 pb-28 pt-8 shadow-sm">
