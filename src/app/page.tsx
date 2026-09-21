@@ -76,6 +76,7 @@ export default async function Home() {
     const pr=a.projects as {name?:string}|null;
     const days=fp?.deadline_date?Math.ceil((new Date(fp.deadline_date+"T12:00:00").getTime()-new Date(today+"T12:00:00").getTime())/86400000):null;
     if(["identified","to_check","preparing"].includes(a.status)&&days!==null&&days>=0&&days<=30) return [{project:pr?.name??"Dossier",provider:fp?.provider_name??"Financement",program:fp?.name??"Dispositif",reason:days===0?"Échéance de dépôt aujourd’hui.":`Échéance de dépôt dans ${days} jour${days>1?"s":""}.`,impact:1000-days}];
+    if(a.status==="submitted"&&a.submitted_at){const waitingDays=Math.floor((new Date(today+"T12:00:00").getTime()-new Date(a.submitted_at+"T12:00:00").getTime())/86400000);if(waitingDays>=60)return [{project:pr?.name??"Dossier",provider:fp?.provider_name??"Financement",program:fp?.name??"Dispositif",reason:`Dossier déposé depuis ${waitingDays} jours sans décision enregistrée. Vérifie son avancement.`,impact:500+waitingDays}];}
     return [];
   });
   const todoItems=[...fundingTodos,...todoCandidates].sort((a,b)=>b.impact-a.impact).slice(0,5);
