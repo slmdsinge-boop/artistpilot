@@ -4,10 +4,13 @@ import { ArrowLeft, CircleDollarSign, ExternalLink, ShieldCheck, TriangleAlert }
 import { createClient } from "@/lib/supabase/server";
 import { saveEligibilityFact, trackFunding } from "./actions";
 
-export default async function FundingPage(){
+type SearchParams=Promise<Record<string,string|string[]|undefined>>;
+export default async function FundingPage({searchParams}:{searchParams:SearchParams}){
  const supabase=await createClient(); const {data:{user}}=await supabase.auth.getUser(); if(!user) redirect("/login");
  const {data:access}=await supabase.from("user_artist_access").select("artist_id").eq("user_id",user.id).limit(1).maybeSingle();
  const artistId=access?.artist_id;
+ const params=await searchParams; const error=typeof params.error==="string"?params.error:null; const tracked=params.tracked==="1"; const factSaved=params.fact_saved==="1";
+ const errorLabels:Record<string,string>={missing_program:"Financement introuvable.",invalid_project:"Projet invalide.",invalid_organization:"Structure invalide.",project_organization_mismatch:"La structure choisie ne correspond pas à la structure porteuse du projet.",program_not_verified:"Ce dispositif doit être revérifié avant de pouvoir être suivi.",already_tracked:"Ce financement est déjà suivi pour ce projet.",invalid_fact:"Information invalide.",invalid_fact_definition:"Cette information n’est pas encore suffisamment définie.",unverified_fact:"Ce critère doit être revérifié avant enregistrement."};
  const programs=(await supabase.from("funding_programs").select("*").neq("verification_status","archived").order("deadline_date",{ascending:true,nullsFirst:false})).data??[];
  const today=new Date().toISOString().slice(0,10);
  const projects=artistId?(await supabase.from("projects").select("id,name,organization_id").eq("artist_id",artistId).order("name")).data??[]:[];
@@ -48,6 +51,9 @@ export default async function FundingPage(){
  return <main className="mx-auto min-h-screen max-w-md bg-white px-5 pb-12 pt-7">
   <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-neutral-600"><ArrowLeft size={17}/> Cockpit</Link>
   <div className="mt-6 flex items-center gap-3"><div className="rounded-xl bg-neutral-100 p-3"><CircleDollarSign size={24}/></div><div><p className="text-sm font-semibold text-neutral-500">ArtistPilot</p><h1 className="text-2xl font-bold">Financements</h1></div></div>
+  {error&&<div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{errorLabels[error]??"Impossible d’enregistrer cette modification."}</div>}
+  {tracked&&<div className="mt-5 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">Financement ajouté à tes dossiers suivis.</div>}
+  {factSaved&&<div className="mt-5 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">Information enregistrée. L’analyse d’éligibilité a été recalculée.</div>}
   <div className="mt-5 rounded-2xl border border-neutral-200 p-4 text-sm text-neutral-600"><p className="font-semibold text-neutral-900">Principe de sécurité</p><p className="mt-1">ArtistPilot distingue les dispositifs vérifiés de ceux à vérifier. Une aide n’est jamais présentée comme acquise : l’éligibilité sera calculée à partir de faits connus et de sources officielles.</p></div>
   {projects.some(p=>!p.organization_id)&&<div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Certains projets n’ont pas encore de structure porteuse. Les critères de structure restent inconnus pour ces projets jusqu’à ce qu’une structure soit associée.</div>}
   <section className="mt-7"><h2 className="font-semibold">Analyse d’éligibilité V2.3</h2>{projects.length===0?<p className="mt-3 rounded-2xl border border-dashed p-4 text-sm text-neutral-600">Ajoute d’abord un projet pour lancer l’analyse.</p>:v2Rows.length===0?<p className="mt-3 rounded-2xl border border-dashed p-4 text-sm text-neutral-600">Aucun critère vérifié applicable pour le moment. ArtistPilot ne déduit rien en l’absence de données.</p>:<div className="mt-3 space-y-2">{v2Rows.map(m=><div key={m.project_id+"-"+m.funding_program_id} className="rounded-2xl border p-4"><p className="text-xs font-semibold uppercase text-neutral-500">{m.provider_name} · {m.project_name}</p><p className="mt-1 font-medium">{m.program_name}</p><p className="mt-1 text-sm font-semibold">{statusLabels[m.eligibility_status]??m.eligibility_status}</p><p className="mt-1 text-xs text-neutral-600">{m.satisfied_count}/{m.total_count} critères satisfaits · {m.missing_count} information(s) manquante(s){m.not_met_count?(" · "+m.not_met_count+" condition(s) non remplie(s)"):""}</p></div>)}</div>}</section>
