@@ -51,7 +51,7 @@ export default async function FundingPage({searchParams}:{searchParams:SearchPar
  const askableMissing=rankedMissing.filter((m:any)=>factDefinitionByKey.has(m.criterion_key));
  const nextQuestion=askableMissing[0]??null;
  const undefinedMissingCount=rankedMissing.length-askableMissing.length;
- const applicationStatusLabels:Record<string,string>={identified:"Identifié",to_check:"À vérifier",eligible:"À vérifier (ancien statut)",preparing:"Dossier en préparation",submitted:"Déposé",awarded:"Accordé",rejected:"Refusé",withdrawn:"Retiré"};
+ const applicationStatusLabels:Record<string,string>={identified:"Identifié",to_check:"À vérifier",preparing:"Dossier en préparation",submitted:"Déposé",awarded:"Accordé",rejected:"Refusé",withdrawn:"Retiré"};
  const statusLabels:Record<string,string>={potentially_compatible:"Potentiellement compatible",missing_information:"Informations manquantes",criterion_not_met:"Condition non remplie",verification_required:"Vérification nécessaire"};
  return <main className="mx-auto min-h-screen max-w-md bg-white px-5 pb-12 pt-7">
   <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-neutral-600"><ArrowLeft size={17}/> Cockpit</Link>
