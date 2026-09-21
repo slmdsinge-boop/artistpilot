@@ -44,3 +44,45 @@ export async function deleteProject(formData: FormData) {
   if(error) redirect(`/projects?error=${encodeURIComponent(error.message)}`);
   revalidatePath("/projects"); redirect("/projects?deleted=1");
 }
+
+
+function nullableBoolean(value: FormDataEntryValue | null) {
+  if (value === "yes") return true;
+  if (value === "no") return false;
+  return null;
+}
+
+function nullableNonNegativeNumber(value: FormDataEntryValue | null) {
+  const raw=String(value??"").trim();
+  if(!raw) return null;
+  const parsed=Number(raw);
+  if(!Number.isFinite(parsed)||parsed<0) throw new Error("invalid_number");
+  return parsed;
+}
+
+export async function updateProjectFundingFacts(formData: FormData) {
+  const id=String(formData.get("id")??"").trim();
+  if(!id) redirect("/projects");
+  const {supabase,artistId}=await requireContext();
+  let budget_eur:number|null, performance_count:number|null, artist_count:number|null;
+  try {
+    budget_eur=nullableNonNegativeNumber(formData.get("budget_eur"));
+    performance_count=nullableNonNegativeNumber(formData.get("performance_count"));
+    artist_count=nullableNonNegativeNumber(formData.get("artist_count"));
+  } catch {
+    redirect("/projects?error=invalid_number");
+  }
+  const {error}=await supabase.from("projects").update({
+    budget_eur,
+    performance_count,
+    artist_count,
+    international:nullableBoolean(formData.get("international")),
+    recording_started:nullableBoolean(formData.get("recording_started")),
+    recording_finished:nullableBoolean(formData.get("recording_finished")),
+  }).eq("id",id).eq("artist_id",artistId);
+  if(error) redirect(`/projects?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/");
+  revalidatePath("/projects");
+  revalidatePath("/funding");
+  redirect("/projects?updated=1");
+}
