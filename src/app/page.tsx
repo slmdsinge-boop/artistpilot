@@ -69,8 +69,8 @@ export default async function Home() {
     }
     todoCandidates.push(...grouped.values());
   }
-  const fundingApplications=artistId?(await supabase.from("funding_applications").select("id,status,submitted_at,decision_at,funding_programs(name,provider_name,deadline_date),projects(name)").eq("artist_id",artistId).order("updated_at",{ascending:false})).data??[]:[];
-  const today=new Date().toISOString().slice(0,10);
+  const fundingApplications=artistId?(await supabase.from("funding_applications").select("id,status,requested_amount_eur,awarded_amount_eur,submitted_at,decision_at,funding_programs(name,provider_name,deadline_date),projects(name)").eq("artist_id",artistId).order("updated_at",{ascending:false})).data??[]:[];
+  const fundingSummary=fundingApplications.reduce((acc:any,a:any)=>{if(a.status==="submitted")acc.pending++;if(a.status==="awarded"){acc.awardedCount++;acc.awarded+=Number(a.awarded_amount_eur??0);}return acc;},{pending:0,awardedCount:0,awarded:0});\n  const today=new Date().toISOString().slice(0,10);
   const fundingTodos=fundingApplications.flatMap((a:any)=>{
     const fp=a.funding_programs as {name?:string;provider_name?:string;deadline_date?:string}|null;
     const pr=a.projects as {name?:string}|null;
@@ -111,6 +111,7 @@ export default async function Home() {
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">Cockpit</h2>
+        {fundingApplications.length>0&&<Link href="/funding" className="mb-3 block rounded-2xl border border-neutral-200 p-4"><div className="flex items-center justify-between gap-3"><p className="font-semibold">Financements</p><span className="text-xs text-neutral-500">{fundingApplications.length} dossier{fundingApplications.length>1?"s":""}</span></div><div className="mt-3 grid grid-cols-3 gap-2 text-center"><div><p className="text-lg font-bold">{fundingSummary.pending}</p><p className="text-[11px] text-neutral-500">En attente</p></div><div><p className="text-lg font-bold">{fundingSummary.awardedCount}</p><p className="text-[11px] text-neutral-500">Accordé{fundingSummary.awardedCount>1?"s":""}</p></div><div><p className="text-lg font-bold">{fundingSummary.awarded.toLocaleString("fr-FR")} €</p><p className="text-[11px] text-neutral-500">Obtenu</p></div></div></Link>}
         <div className="grid grid-cols-2 gap-3">
           {modules.map(([label, Icon, href]) => href ? (
             <Link key={label} href={href} className="min-h-28 rounded-2xl border border-neutral-200 p-4 text-left transition active:scale-[.98]">
