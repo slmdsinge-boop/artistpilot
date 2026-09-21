@@ -41,7 +41,7 @@ export async function deleteProject(formData: FormData) {
   const id=String(formData.get("id")??""); if(!id) redirect("/projects");
   const {supabase,artistId}=await requireContext();
   const {error}=await supabase.from("projects").delete().eq("id",id).eq("artist_id",artistId);
-  if(error) redirect(`/projects?error=${encodeURIComponent(error.message)}`);
+  if(error) redirect("/projects?error=save_failed");
   revalidatePath("/projects"); redirect("/projects?deleted=1");
 }
 
@@ -80,7 +80,7 @@ export async function updateProjectFundingFacts(formData: FormData) {
     recording_started:nullableBoolean(formData.get("recording_started")),
     recording_finished:nullableBoolean(formData.get("recording_finished")),
   }).eq("id",id).eq("artist_id",artistId);
-  if(error) redirect(`/projects?error=${encodeURIComponent(error.message)}`);
+  if(error) redirect("/projects?error=save_failed");
   revalidatePath("/");
   revalidatePath("/projects");
   revalidatePath("/funding");
@@ -94,6 +94,6 @@ export async function updateProjectOrganization(formData:FormData){
  const {supabase,artistId}=await requireContext();
  if(organizationId){const {data}=await supabase.from("organizations").select("id").eq("id",organizationId).eq("artist_id",artistId).maybeSingle();if(!data) redirect("/projects?error=invalid_organization");}
  const {error}=await supabase.from("projects").update({organization_id:organizationId}).eq("id",id).eq("artist_id",artistId);
- if(error) redirect(`/projects?error=${encodeURIComponent(error.message)}`);
+ if(error) redirect("/projects?error=save_failed");
  revalidatePath("/projects"); revalidatePath("/funding"); revalidatePath("/"); redirect("/projects?carrier_updated=1");
 }
