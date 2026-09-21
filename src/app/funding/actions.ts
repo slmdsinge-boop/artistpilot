@@ -26,13 +26,32 @@ export async function saveEligibilityFact(formData:FormData){
  const subjectType=String(formData.get("subject_type")??"");
  const subjectId=String(formData.get("subject_id")??"");
  const factKey=String(formData.get("fact_key")??"");
- const raw=String(formData.get("value")??"");
- if(!["project","organization","artist","application"].includes(subjectType)||!subjectId||!factKey||!raw) redirect("/funding?error=invalid_fact");
+ const raw=String(formData.get("value")??"").trim();
+ if(!["project","organization","artist","application"].includes(subjectType)||!subjectId||!factKey||raw==="") redirect("/funding?error=invalid_fact");
  const {supabase,artistId}=await context();
+
+ const {data:def}=await supabase.from("fact_definitions").select("subject_type,value_type,options").eq("fact_key",factKey).maybeSingle();
+ if(!def||def.subject_type!==subjectType) redirect("/funding?error=invalid_fact_definition");
+ const {data:criterion}=await supabase.from("funding_criteria").select("id").eq("criterion_key",factKey).eq("subject_type",subjectType).eq("verification_status","verified").limit(1).maybeSingle();
+ if(!criterion) redirect("/funding?error=unverified_fact");
+
  if(subjectType==="project"){const {data}=await supabase.from("projects").select("id").eq("id",subjectId).eq("artist_id",artistId).maybeSingle();if(!data) redirect("/funding?error=invalid_project");}
  if(subjectType==="organization"){const {data}=await supabase.from("organizations").select("id").eq("id",subjectId).eq("artist_id",artistId).maybeSingle();if(!data) redirect("/funding?error=invalid_organization");}
- let value:any;
- if(raw==="true"||raw==="false") value=raw==="true"; else if(raw.trim()!==""&&!Number.isNaN(Number(raw))) value=Number(raw); else value=raw;
+ if(subjectType==="artist"&&subjectId!==artistId) redirect("/funding?error=invalid_artist");
+ if(subjectType==="application"){const {data}=await supabase.from("funding_applications").select("id").eq("id",subjectId).eq("artist_id",artistId).maybeSingle();if(!data) redirect("/funding?error=invalid_application");}
+
+ let value:unknown;
+ if(def.value_type==="boolean"){
+  if(raw!=="true"&&raw!=="false") redirect("/funding?error=invalid_boolean");
+  value=raw==="true";
+ } else if(def.value_type==="number"){
+  const n=Number(raw); if(!Number.isFinite(n)||n<0) redirect("/funding?error=invalid_number"); value=n;
+ } else if(def.value_type==="date"){
+  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(raw)||Number.isNaN(Date.parse(raw+"T12:00:00Z"))) redirect("/funding?error=invalid_date"); value=raw;
+ } else if(def.value_type==="enum"){
+  const opts=Array.isArray(def.options)?def.options:[]; if(!opts.includes(raw)) redirect("/funding?error=invalid_option"); value=raw;
+ } else value=raw;
+
  const {error}=await supabase.from("entity_facts").upsert({artist_id:artistId,subject_type:subjectType,subject_id:subjectId,fact_key:factKey,value,confirmation_status:"user_confirmed",confirmed_at:new Date().toISOString()},{onConflict:"artist_id,subject_type,subject_id,fact_key"});
  if(error) redirect(`/funding?error=${encodeURIComponent(error.message)}`);
  revalidatePath("/funding"); revalidatePath("/"); redirect("/funding?fact_saved=1");
