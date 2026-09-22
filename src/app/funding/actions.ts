@@ -90,8 +90,11 @@ export async function updateFundingApplicationDetails(formData:FormData){
  const notes=notesRaw?notesRaw.slice(0,5000):null;
  const submittedAtRaw=String(formData.get("submitted_at")??"").trim();
  const decisionAtRaw=String(formData.get("decision_at")??"").trim();
- const validDate=(value:string)=>!value||/^\d{4}-\d{2}-\d{2}$/.test(value);
+ const validDate=(value:string)=>!value||(/^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value+"T12:00:00Z")));
  if(!validDate(submittedAtRaw)||!validDate(decisionAtRaw)) redirect("/funding?error=invalid_date");
+ const today=new Date().toISOString().slice(0,10);
+ if(submittedAtRaw&&submittedAtRaw>today) redirect("/funding?error=submitted_date_future");
+ if(decisionAtRaw&&decisionAtRaw>today) redirect("/funding?error=decision_date_future");
  if(submittedAtRaw&&decisionAtRaw&&decisionAtRaw<submittedAtRaw) redirect("/funding?error=decision_before_submission");
  if(["submitted","awarded","rejected"].includes(application.status)&&!submittedAtRaw) redirect("/funding?error=submitted_date_required_for_status");
  if(["awarded","rejected"].includes(application.status)&&!decisionAtRaw) redirect("/funding?error=decision_date_required_for_status");
