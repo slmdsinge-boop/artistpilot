@@ -169,3 +169,18 @@ export async function createFundingObligation(formData:FormData){
  if(error) redirect("/funding?error=obligation_save_failed");
  revalidatePath("/funding");revalidatePath("/");redirect("/funding?obligation_saved=1");
 }
+
+
+export async function updateFundingObligationStatus(formData:FormData){
+ const obligationId=String(formData.get("obligation_id")??"");
+ const status=String(formData.get("status")??"");
+ if(!obligationId||!["to_do","in_progress","done","not_applicable"].includes(status)) redirect("/funding?error=invalid_obligation_status");
+ const {supabase,artistId}=await context();
+ const {data:obligation}=await supabase.from("funding_obligations").select("id,status").eq("id",obligationId).eq("artist_id",artistId).maybeSingle();
+ if(!obligation) redirect("/funding?error=invalid_obligation");
+ if(obligation.status===status) redirect("/funding");
+ const completedAt=status==="done"?new Date().toISOString().slice(0,10):null;
+ const {error}=await supabase.from("funding_obligations").update({status,completed_at:completedAt,updated_at:new Date().toISOString()}).eq("id",obligationId).eq("artist_id",artistId);
+ if(error) redirect("/funding?error=obligation_update_failed");
+ revalidatePath("/funding");revalidatePath("/");redirect("/funding?obligation_updated=1");
+}
