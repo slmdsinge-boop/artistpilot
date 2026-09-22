@@ -183,6 +183,8 @@ export async function updateFundingObligationStatus(formData:FormData){
  if(!obligationId||!["to_do","in_progress","done","not_applicable"].includes(status)) redirect("/funding?error=invalid_obligation_status");
  if(completedAtRaw&&(!/^\d{4}-\d{2}-\d{2}$/.test(completedAtRaw)||Number.isNaN(Date.parse(completedAtRaw+"T12:00:00Z")))) redirect("/funding?error=invalid_obligation_completion_date");
  if(status==="done"&&!completedAtRaw) redirect("/funding?error=obligation_completion_date_required");
+ const today=new Date().toISOString().slice(0,10);
+ if(status==="done"&&completedAtRaw>today) redirect("/funding?error=obligation_completion_date_future");
  const {supabase,artistId}=await context();
  const {data:obligation}=await supabase.from("funding_obligations").select("id,status,completed_at").eq("id",obligationId).eq("artist_id",artistId).maybeSingle();
  if(!obligation) redirect("/funding?error=invalid_obligation");
