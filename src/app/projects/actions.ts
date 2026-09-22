@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isValidIsoDate } from "@/lib/dates";
+const PROJECT_TYPES=new Set(["album","ep","single","clip","tournee","spectacle","festival","residence","autre"]);
+const PROJECT_STATUSES=new Set(["idea","preparation","active","completed","paused"]);
 
 async function requireContext() {
   const supabase = await createClient();
@@ -25,6 +28,9 @@ export async function createProject(formData: FormData) {
   const startDate=String(formData.get("start_date")??"").trim()||null;
   const targetDate=String(formData.get("target_date")??"").trim()||null;
   if(!name||!projectType) redirect("/projects?error=missing_fields");
+  if(!PROJECT_TYPES.has(projectType)||!PROJECT_STATUSES.has(status)) redirect("/projects?error=invalid_project");
+  if((startDate&&!isValidIsoDate(startDate))||(targetDate&&!isValidIsoDate(targetDate))) redirect("/projects?error=invalid_date");
+  if(startDate&&targetDate&&targetDate<startDate) redirect("/projects?error=invalid_date_range");
 
   const {supabase,artistId}=await requireContext();
   if(organizationId){
@@ -53,11 +59,11 @@ function nullableBoolean(value: FormDataEntryValue | null) {
   return null;
 }
 
-function nullableNonNegativeNumber(value: FormDataEntryValue | null) {
+function nullableNonNegativeNumber(value: FormDataEntryValue | null, integer=false) {
   const raw=String(value??"").trim();
   if(!raw) return null;
   const parsed=Number(raw);
-  if(!Number.isFinite(parsed)||parsed<0) throw new Error("invalid_number");
+  if(!Number.isFinite(parsed)||parsed<0||(integer&&!Number.isInteger(parsed))) throw new Error("invalid_number");
   return parsed;
 }
 
@@ -68,8 +74,8 @@ export async function updateProjectFundingFacts(formData: FormData) {
   let budget_eur:number|null, performance_count:number|null, artist_count:number|null;
   try {
     budget_eur=nullableNonNegativeNumber(formData.get("budget_eur"));
-    performance_count=nullableNonNegativeNumber(formData.get("performance_count"));
-    artist_count=nullableNonNegativeNumber(formData.get("artist_count"));
+    performance_count=nullableNonNegativeNumber(formData.get("performance_count"),true);
+    artist_count=nullableNonNegativeNumber(formData.get("artist_count"),true);
   } catch {
     redirect("/projects?error=invalid_number");
   }
