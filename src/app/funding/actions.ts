@@ -90,7 +90,7 @@ export async function updateFundingApplicationDetails(formData:FormData){
  const notes=notesRaw?notesRaw.slice(0,5000):null;
  const submittedAtRaw=String(formData.get("submitted_at")??"").trim();
  const decisionAtRaw=String(formData.get("decision_at")??"").trim();
- const validDate=(value:string)=>!value||/^\\d{4}-\\d{2}-\\d{2}$/.test(value);
+ const validDate=(value:string)=>!value||/^\d{4}-\d{2}-\d{2}$/.test(value);
  if(!validDate(submittedAtRaw)||!validDate(decisionAtRaw)) redirect("/funding?error=invalid_date");
  if(submittedAtRaw&&decisionAtRaw&&decisionAtRaw<submittedAtRaw) redirect("/funding?error=decision_before_submission");
  if(["submitted","awarded","rejected"].includes(application.status)&&!submittedAtRaw) redirect("/funding?error=submitted_date_required_for_status");
@@ -129,7 +129,7 @@ export async function saveEligibilityFact(formData:FormData){
  } else if(def.value_type==="number"){
   const n=Number(raw); if(!Number.isFinite(n)||n<0) redirect("/funding?error=invalid_number"); value=n;
  } else if(def.value_type==="date"){
-  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(raw)||Number.isNaN(Date.parse(raw+"T12:00:00Z"))) redirect("/funding?error=invalid_date"); value=raw;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(raw)||Number.isNaN(Date.parse(raw+"T12:00:00Z"))) redirect("/funding?error=invalid_date"); value=raw;
  } else if(def.value_type==="enum"){
   const opts=Array.isArray(def.options)?def.options:[]; if(!opts.includes(raw)) redirect("/funding?error=invalid_option"); value=raw;
  } else value=raw;
@@ -164,7 +164,7 @@ export async function createFundingObligation(formData:FormData){
  const dueDate=String(formData.get("due_date")??"").trim();
  const notes=String(formData.get("notes")??"").trim();
  if(!applicationId||!title||title.length>240) redirect("/funding?error=invalid_obligation");
- if(dueDate&&(!/^\\d{4}-\\d{2}-\\d{2}$/.test(dueDate)||Number.isNaN(Date.parse(dueDate+"T12:00:00Z")))) redirect("/funding?error=invalid_obligation_date");
+ if(dueDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)||Number.isNaN(Date.parse(dueDate+"T12:00:00Z")))) redirect("/funding?error=invalid_obligation_date");
  if(notes.length>5000) redirect("/funding?error=obligation_notes_too_long");
  const {supabase,artistId}=await context();
  const {data:application}=await supabase.from("funding_applications").select("id,status").eq("id",applicationId).eq("artist_id",artistId).maybeSingle();
