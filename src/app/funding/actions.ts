@@ -179,12 +179,15 @@ export async function createFundingObligation(formData:FormData){
 export async function updateFundingObligationStatus(formData:FormData){
  const obligationId=String(formData.get("obligation_id")??"");
  const status=String(formData.get("status")??"");
+ const completedAtRaw=String(formData.get("completed_at")??"").trim();
  if(!obligationId||!["to_do","in_progress","done","not_applicable"].includes(status)) redirect("/funding?error=invalid_obligation_status");
+ if(completedAtRaw&&(!/^\d{4}-\d{2}-\d{2}$/.test(completedAtRaw)||Number.isNaN(Date.parse(completedAtRaw+"T12:00:00Z")))) redirect("/funding?error=invalid_obligation_completion_date");
+ if(status==="done"&&!completedAtRaw) redirect("/funding?error=obligation_completion_date_required");
  const {supabase,artistId}=await context();
- const {data:obligation}=await supabase.from("funding_obligations").select("id,status").eq("id",obligationId).eq("artist_id",artistId).maybeSingle();
+ const {data:obligation}=await supabase.from("funding_obligations").select("id,status,completed_at").eq("id",obligationId).eq("artist_id",artistId).maybeSingle();
  if(!obligation) redirect("/funding?error=invalid_obligation");
- if(obligation.status===status) redirect("/funding");
- const completedAt=status==="done"?new Date().toISOString().slice(0,10):null;
+ const completedAt=status==="done"?completedAtRaw:null;
+ if(obligation.status===status&&obligation.completed_at===completedAt) redirect("/funding");
  const {error}=await supabase.from("funding_obligations").update({status,completed_at:completedAt,updated_at:new Date().toISOString()}).eq("id",obligationId).eq("artist_id",artistId);
  if(error) redirect("/funding?error=obligation_update_failed");
  revalidatePath("/funding");revalidatePath("/");redirect("/funding?obligation_updated=1");
