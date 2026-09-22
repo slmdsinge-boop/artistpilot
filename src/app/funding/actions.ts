@@ -188,7 +188,7 @@ export async function updateFundingObligationStatus(formData:FormData){
  if(!obligation) redirect("/funding?error=invalid_obligation");
  const completedAt=status==="done"?completedAtRaw:null;
  if(obligation.status===status&&obligation.completed_at===completedAt) redirect("/funding");
- const {error}=await supabase.from("funding_obligations").update({status,completed_at:completedAt,updated_at:new Date().toISOString()}).eq("id",obligationId).eq("artist_id",artistId);
+ const {error}=await supabase.from("funding_obligations").update({status,completed_at:completedAt}).eq("id",obligationId).eq("artist_id",artistId);
  if(error) redirect("/funding?error=obligation_update_failed");
  revalidatePath("/funding");revalidatePath("/");redirect("/funding?obligation_updated=1");
 }
