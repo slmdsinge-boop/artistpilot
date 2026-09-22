@@ -151,3 +151,21 @@ export async function clearEligibilityFact(formData:FormData){
  if(fact){const {error}=await supabase.from("entity_facts").delete().eq("id",fact.id);if(error) redirect("/funding?error=fact_clear_failed");}
  revalidatePath("/funding"); revalidatePath("/"); redirect("/funding?fact_cleared=1");
 }
+
+
+export async function createFundingObligation(formData:FormData){
+ const applicationId=String(formData.get("application_id")??"");
+ const title=String(formData.get("title")??"").trim();
+ const dueDate=String(formData.get("due_date")??"").trim();
+ const notes=String(formData.get("notes")??"").trim();
+ if(!applicationId||!title||title.length>240) redirect("/funding?error=invalid_obligation");
+ if(dueDate&&(!/^\\d{4}-\\d{2}-\\d{2}$/.test(dueDate)||Number.isNaN(Date.parse(dueDate+"T12:00:00Z")))) redirect("/funding?error=invalid_obligation_date");
+ if(notes.length>5000) redirect("/funding?error=obligation_notes_too_long");
+ const {supabase,artistId}=await context();
+ const {data:application}=await supabase.from("funding_applications").select("id,status").eq("id",applicationId).eq("artist_id",artistId).maybeSingle();
+ if(!application) redirect("/funding?error=invalid_application");
+ if(application.status!=="awarded") redirect("/funding?error=obligation_requires_award");
+ const {error}=await supabase.from("funding_obligations").insert({artist_id:artistId,funding_application_id:applicationId,title,due_date:dueDate||null,notes:notes||null,status:"to_do"});
+ if(error) redirect("/funding?error=obligation_save_failed");
+ revalidatePath("/funding");revalidatePath("/");redirect("/funding?obligation_saved=1");
+}
