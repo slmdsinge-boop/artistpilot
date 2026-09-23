@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { isValidIsoDate } from "@/lib/dates";
 
 const STATUSES=new Set(["planned","confirmed","completed","cancelled"]);
+const CONTRACT_STATUSES=new Set(["unknown","pending","signed"]);
+const PAYMENT_STATUSES=new Set(["unknown","pending","paid"]);
 
 async function context(){
  const supabase=await createClient();
@@ -30,16 +32,22 @@ export async function createConcert(formData:FormData){
  const projectId=String(formData.get("project_id")??"").trim()||null;
  const organizationId=String(formData.get("organization_id")??"").trim()||null;
  const notes=String(formData.get("notes")??"").trim()||null;
+ const contractStatus=String(formData.get("contract_status")??"unknown").trim();
+ const paymentStatus=String(formData.get("payment_status")??"unknown").trim();
+ const employerName=String(formData.get("employer_name")??"").trim()||null;
+ const payslipReceived=formData.get("payslip_received")==="yes"?true:formData.get("payslip_received")==="no"?false:null;
+ const aemReceived=formData.get("aem_received")==="yes"?true:formData.get("aem_received")==="no"?false:null;
  if(!title||title.length>240||!performanceDate)redirect("/concerts?error=missing_fields");
  if(!isValidIsoDate(performanceDate))redirect("/concerts?error=invalid_date");
- if(!STATUSES.has(status))redirect("/concerts?error=invalid_status");
+ if(!STATUSES.has(status)||!CONTRACT_STATUSES.has(contractStatus)||!PAYMENT_STATUSES.has(paymentStatus))redirect("/concerts?error=invalid_status");
+ if(employerName&&employerName.length>240)redirect("/concerts?error=invalid_employer");
  if(notes&&notes.length>5000)redirect("/concerts?error=notes_too_long");
  let fee:number|null,paidHours:number|null;
  try{fee=nullableNumber(formData.get("fee_eur"));paidHours=nullableNumber(formData.get("paid_hours"));}catch{redirect("/concerts?error=invalid_number");}
  const {supabase,artistId}=await context();
  if(projectId){const {data}=await supabase.from("projects").select("id").eq("id",projectId).eq("artist_id",artistId).maybeSingle();if(!data)redirect("/concerts?error=invalid_project");}
  if(organizationId){const {data}=await supabase.from("organizations").select("id").eq("id",organizationId).eq("artist_id",artistId).maybeSingle();if(!data)redirect("/concerts?error=invalid_organization");}
- const {error}=await supabase.from("concerts").insert({artist_id:artistId,project_id:projectId,organization_id:organizationId,title,venue,city,performance_date:performanceDate,status,fee_eur:fee,paid_hours:paidHours,notes});
+ const {error}=await supabase.from("concerts").insert({artist_id:artistId,project_id:projectId,organization_id:organizationId,title,venue,city,performance_date:performanceDate,status,fee_eur:fee,paid_hours:paidHours,notes,contract_status:contractStatus,payment_status:paymentStatus,employer_name:employerName,payslip_received:payslipReceived,aem_received:aemReceived});
  if(error)redirect("/concerts?error=save_failed");
  revalidatePath("/concerts");revalidatePath("/");redirect("/concerts?created=1");
 }
