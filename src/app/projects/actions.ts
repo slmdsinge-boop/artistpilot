@@ -100,6 +100,13 @@ export async function updateProjectOrganization(formData:FormData){
  if(!id) redirect("/projects");
  const {supabase,artistId}=await requireContext();
  if(organizationId){const {data}=await supabase.from("organizations").select("id").eq("id",organizationId).eq("artist_id",artistId).maybeSingle();if(!data) redirect("/projects?error=invalid_organization");}
+ const {data:project}=await supabase.from("projects").select("organization_id").eq("id",id).eq("artist_id",artistId).maybeSingle();
+ if(!project) redirect("/projects?error=invalid_project");
+ const currentOrganizationId=project.organization_id??null;
+ if(currentOrganizationId!==organizationId){
+  const {count}=await supabase.from("funding_applications").select("id",{count:"exact",head:true}).eq("artist_id",artistId).eq("project_id",id);
+  if((count??0)>0) redirect("/projects?error=carrier_has_funding_history");
+ }
  const {error}=await supabase.from("projects").update({organization_id:organizationId}).eq("id",id).eq("artist_id",artistId);
  if(error) redirect("/projects?error=save_failed");
  revalidatePath("/projects"); revalidatePath("/funding"); revalidatePath("/"); redirect("/projects?carrier_updated=1");
