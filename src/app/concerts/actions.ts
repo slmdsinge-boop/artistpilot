@@ -42,12 +42,13 @@ export async function createConcert(formData:FormData){
  if(!STATUSES.has(status)||!CONTRACT_STATUSES.has(contractStatus)||!PAYMENT_STATUSES.has(paymentStatus))redirect("/concerts?error=invalid_status");
  if(employerName&&employerName.length>240)redirect("/concerts?error=invalid_employer");
  if(notes&&notes.length>5000)redirect("/concerts?error=notes_too_long");
- let fee:number|null,paidHours:number|null;
- try{fee=nullableNumber(formData.get("fee_eur"));paidHours=nullableNumber(formData.get("paid_hours"));}catch{redirect("/concerts?error=invalid_number");}
+ let fee:number|null,paidHours:number|null,cachetCount:number|null;
+ try{fee=nullableNumber(formData.get("fee_eur"));paidHours=nullableNumber(formData.get("paid_hours"));cachetCount=nullableNumber(formData.get("cachet_count"));}catch{redirect("/concerts?error=invalid_number");}
+ if(cachetCount!==null&&(!Number.isInteger(cachetCount)||cachetCount>28))redirect("/concerts?error=invalid_cachet_count");
  const {supabase,artistId}=await context();
  if(projectId){const {data}=await supabase.from("projects").select("id").eq("id",projectId).eq("artist_id",artistId).maybeSingle();if(!data)redirect("/concerts?error=invalid_project");}
  if(organizationId){const {data}=await supabase.from("organizations").select("id").eq("id",organizationId).eq("artist_id",artistId).maybeSingle();if(!data)redirect("/concerts?error=invalid_organization");}
- const {error}=await supabase.from("concerts").insert({artist_id:artistId,project_id:projectId,organization_id:organizationId,title,venue,city,performance_date:performanceDate,status,fee_eur:fee,paid_hours:paidHours,notes,contract_status:contractStatus,payment_status:paymentStatus,employer_name:employerName,payslip_received:payslipReceived,aem_received:aemReceived});
+ const {error}=await supabase.from("concerts").insert({artist_id:artistId,project_id:projectId,organization_id:organizationId,title,venue,city,performance_date:performanceDate,status,fee_eur:fee,paid_hours:paidHours,notes,contract_status:contractStatus,payment_status:paymentStatus,employer_name:employerName,payslip_received:payslipReceived,aem_received:aemReceived,cachet_count:cachetCount});
  if(error)redirect("/concerts?error=save_failed");
  revalidatePath("/concerts");revalidatePath("/");redirect("/concerts?created=1");
 }
