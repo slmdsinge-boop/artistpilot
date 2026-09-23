@@ -71,6 +71,11 @@ begin
     from public.funding_criteria fc
     where fc.verification_status = 'verified'
       and fc.criterion_kind = 'eligibility'
+      and exists (
+        select 1 from public.fact_definitions fd
+        where fd.fact_key = fc.criterion_key
+          and fd.subject_type = fc.subject_type
+      )
       and not public.funding_criterion_expected_value_is_valid(
         fc.subject_type, fc.criterion_key, fc.operator, fc.expected_value
       )
@@ -88,6 +93,11 @@ as $$
 begin
   if new.verification_status = 'verified'
      and new.criterion_kind = 'eligibility'
+     and exists (
+       select 1 from public.fact_definitions fd
+       where fd.fact_key = new.criterion_key
+         and fd.subject_type = new.subject_type
+     )
      and not public.funding_criterion_expected_value_is_valid(
        new.subject_type, new.criterion_key, new.operator, new.expected_value
      ) then
@@ -107,4 +117,4 @@ comment on function public.funding_criterion_expected_value_is_valid(text,text,t
 'Validates executable eligibility comparison metadata against the canonical fact type, enum options and supported operator semantics.';
 
 comment on function public.guard_funding_criterion_expected_value() is
-'Prevents verified eligibility criteria from becoming executable with incompatible expected-value metadata.';
+'Prevents verified eligibility criteria that have canonical fact definitions from becoming executable with incompatible expected-value metadata; missing definitions remain fail-closed in readiness.';
