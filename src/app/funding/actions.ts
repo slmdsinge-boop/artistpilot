@@ -29,7 +29,9 @@ export async function trackFunding(formData:FormData){
   const {data:eligibility}=await supabase.rpc("evaluate_funding_eligibility_v23",{target_artist:artistId,target_project:projectId,target_organization:projectOrganizationId??organizationId??null});
   const programRows=(eligibility??[]).filter((r:any)=>r.funding_program_id===programId);
   if(!programRows.length) redirect("/funding?error=eligibility_context_mismatch");
-  if(programRows.some((r:any)=>r.blocking&&r.criterion_kind==="eligibility"&&r.criterion_status==="criterion_not_met")) redirect("/funding?error=blocking_criterion_not_met");
+  const blockingEligibility=programRows.filter((r:any)=>r.blocking&&r.criterion_kind==="eligibility");
+  if(blockingEligibility.some((r:any)=>r.criterion_status==="criterion_not_met")) redirect("/funding?error=blocking_criterion_not_met");
+  if(blockingEligibility.some((r:any)=>["missing_information","pending_context"].includes(r.criterion_status))) redirect("/funding?error=eligibility_information_required");
  }
  const today=todayIsoDate();
  if(program.deadline_date&&program.deadline_date<today) redirect("/funding?error=program_closed");
