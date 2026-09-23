@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { CircleDollarSign, Music2, CalendarDays, FolderOpen, Bell, FolderKanban, Building2, UserRound } from "lucide-react";
+import { CircleDollarSign, Music2, CalendarDays, FolderOpen, Bell, FolderKanban, Building2, UserRound, ChevronRight, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { daysBetweenIsoDates, todayIsoDate } from "@/lib/dates";
 import { UniversalAdd } from "@/components/universal-add";
@@ -92,17 +92,17 @@ export default async function Home() {
   const urgentTodoCount=allTodoItems.filter(item=>["overdue","incomplete","obligation_overdue"].includes(item.kind??"")).length;
 
   return (
-    <main className="mx-auto min-h-screen max-w-md bg-white px-5 pb-28 pt-8 shadow-sm">
+    <main className="mx-auto min-h-screen max-w-md bg-white px-5 pb-32 pt-8 shadow-sm">
       <header className="mb-7 flex items-start justify-between">
         <div>
           <p className="text-sm font-semibold text-neutral-500">ArtistPilot</p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight">{artistName ? `Bonjour, ${artistName}` : "Bonjour 👋"}</h1>
-          <p className="mt-2 text-neutral-600">Qu’est-ce que je dois faire maintenant ?</p>
+          <p className="mt-2 text-neutral-600">Voici ce qui mérite ton attention aujourd’hui.</p>
         </div>
         <div className="rounded-full bg-neutral-100 p-2.5"><UserRound size={20}/></div>
       </header>
 
-      <section className="mb-7 rounded-2xl border border-neutral-200 p-4">
+      <section className="mb-7 rounded-3xl border border-neutral-200 bg-neutral-50/70 p-4">
         <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><Bell size={18}/><h2 className="font-semibold">À FAIRE</h2></div>{urgentTodoCount>0&&<span className="rounded-full bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-700">{urgentTodoCount} prioritaire{urgentTodoCount>1?"s":""}</span>}</div>
         {todoItems.length === 0 ? (
           <p className="mt-3 text-sm text-neutral-600">Aucune information utilisateur prioritaire à compléter pour les dispositifs actuellement vérifiés.</p>
@@ -121,16 +121,16 @@ export default async function Home() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold">Cockpit</h2>
-        {fundingApplications.length>0&&<Link href="/funding" className="mb-3 block rounded-2xl border border-neutral-200 p-4"><div className="flex items-center justify-between gap-3"><p className="font-semibold">Financements</p><span className="text-xs text-neutral-500">{fundingApplications.length} dossier{fundingApplications.length>1?"s":""}</span></div><div className="mt-3 grid grid-cols-2 gap-2 text-center"><div><p className="text-lg font-bold">{fundingSummary.pending}</p><p className="text-[11px] text-neutral-500">En attente</p></div><div><p className="text-lg font-bold">{fundingSummary.awardedCount}</p><p className="text-[11px] text-neutral-500">Accordé{fundingSummary.awardedCount>1?"s":""}</p></div><div><p className="text-lg font-bold">{fundingSummary.awarded.toLocaleString("fr-FR")} €</p><p className="text-[11px] text-neutral-500">Obtenu</p></div><div><p className="text-lg font-bold">{fundingSuccessRate===null?"—":fundingSuccessRate+" %"}</p><p className="text-[11px] text-neutral-500">Réussite</p></div></div>{fundingSummary.decided>0&&<p className="mt-2 text-center text-[11px] text-neutral-500">Décisions : {fundingSummary.awardedCount} accordée{fundingSummary.awardedCount>1?"s":""} · {fundingSummary.rejectedCount} refusée{fundingSummary.rejectedCount>1?"s":""}</p>}</Link>}
+        <div className="mb-3 flex items-end justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">Vue d’ensemble</p><h2 className="mt-1 text-xl font-bold">Cockpit</h2></div><Sparkles size={18} className="text-neutral-400"/></div>
+        {fundingApplications.length>0&&<Link href="/funding" className="mb-4 block rounded-3xl bg-neutral-950 p-5 text-white shadow-sm"><div className="flex items-center justify-between gap-3"><p className="font-semibold">Financements</p><span className="text-xs text-neutral-400">{fundingApplications.length} dossier{fundingApplications.length>1?"s":""}</span></div><div className="mt-3 grid grid-cols-2 gap-2 text-center"><div><p className="text-lg font-bold">{fundingSummary.pending}</p><p className="text-[11px] text-neutral-400">En attente</p></div><div><p className="text-lg font-bold">{fundingSummary.awardedCount}</p><p className="text-[11px] text-neutral-400">Accordé{fundingSummary.awardedCount>1?"s":""}</p></div><div><p className="text-lg font-bold">{fundingSummary.awarded.toLocaleString("fr-FR")} €</p><p className="text-[11px] text-neutral-400">Obtenu</p></div><div><p className="text-lg font-bold">{fundingSuccessRate===null?"—":fundingSuccessRate+" %"}</p><p className="text-[11px] text-neutral-400">Réussite</p></div></div>{fundingSummary.decided>0&&<p className="mt-3 border-t border-neutral-800 pt-3 text-center text-[11px] text-neutral-400">Décisions : {fundingSummary.awardedCount} accordée{fundingSummary.awardedCount>1?"s":""} · {fundingSummary.rejectedCount} refusée{fundingSummary.rejectedCount>1?"s":""}</p>}</Link>}
         <div className="grid grid-cols-2 gap-3">
           {modules.map(([label, Icon, href]) => href ? (
-            <Link key={label} href={href} className="min-h-28 rounded-2xl border border-neutral-200 p-4 text-left transition active:scale-[.98]">
-              <Icon size={22}/><span className="mt-5 block font-medium">{label}</span>
+            <Link key={label} href={href} className="group min-h-28 rounded-3xl border border-neutral-200 bg-white p-4 text-left shadow-sm transition active:scale-[.98]">
+              <div className="flex items-start justify-between"><span className="rounded-xl bg-neutral-100 p-2"><Icon size={20}/></span><ChevronRight size={17} className="text-neutral-300"/></div><span className="mt-4 block font-semibold">{label}</span>
             </Link>
           ) : (
-            <div key={label} className="min-h-28 rounded-2xl border border-neutral-200 p-4 text-left text-neutral-500">
-              <Icon size={22}/><span className="mt-5 block font-medium">{label}</span>
+            <div key={label} className="min-h-28 rounded-3xl border border-dashed border-neutral-200 bg-neutral-50 p-4 text-left text-neutral-400">
+              <div className="flex items-start justify-between"><span className="rounded-xl bg-white p-2"><Icon size={20}/></span><span className="text-[10px] font-semibold uppercase tracking-wide">Bientôt</span></div><span className="mt-4 block font-medium">{label}</span>
             </div>
           ))}
         </div>
