@@ -1,0 +1,39 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { ArrowLeft, CalendarDays, MapPin } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { createConcert, deleteConcert } from "./actions";
+import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
+
+type SearchParams=Promise<Record<string,string|string[]|undefined>>;
+const statuses=[["planned","Prévu"],["confirmed","Confirmé"],["completed","Réalisé"],["cancelled","Annulé"]] as const;
+
+export default async function ConcertsPage({searchParams}:{searchParams:SearchParams}){
+ const supabase=await createClient();const {data:{user}}=await supabase.auth.getUser();if(!user)redirect("/login");
+ const {data:access}=await supabase.from("user_artist_access").select("artist_id").eq("user_id",user.id).limit(1).maybeSingle();
+ const artistId=access?.artist_id;
+ const concerts=artistId?(await supabase.from("concerts").select("id,title,venue,city,performance_date,status,fee_eur,paid_hours,projects(name),organizations(name)").eq("artist_id",artistId).order("performance_date",{ascending:false})).data??[]:[];
+ const projects=artistId?(await supabase.from("projects").select("id,name").eq("artist_id",artistId).order("name")).data??[]:[];
+ const organizations=artistId?(await supabase.from("organizations").select("id,name").eq("artist_id",artistId).order("name")).data??[]:[];
+ const params=await searchParams;const error=typeof params.error==="string"?params.error:null;
+ const totalFees=concerts.filter((c:any)=>c.status==="completed").reduce((s:number,c:any)=>s+Number(c.fee_eur??0),0);
+ const totalHours=concerts.filter((c:any)=>c.status==="completed").reduce((s:number,c:any)=>s+Number(c.paid_hours??0),0);
+ return <main className="mx-auto min-h-screen max-w-md bg-white px-5 pb-28 pt-7">
+  <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-neutral-600"><ArrowLeft size={17}/>Cockpit</Link>
+  <div className="mt-6 flex items-center gap-3"><div className="rounded-xl bg-neutral-100 p-3"><CalendarDays size={24}/></div><div><p className="text-sm font-semibold text-neutral-500">ArtistPilot</p><h1 className="text-2xl font-bold">Concerts</h1></div></div>
+  <p className="mt-3 text-sm text-neutral-600">Suis tes dates, cachets et heures déclarées. Ces données prépareront le futur suivi d’intermittence.</p>
+  {error&&<p className="mt-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">Impossible d’enregistrer cette date. Vérifie les informations saisies.</p>}
+  <section className="mt-6 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-neutral-950 p-4 text-white"><p className="text-xs text-neutral-400">Cachets réalisés</p><p className="mt-1 text-xl font-bold">{totalFees.toLocaleString("fr-FR")} €</p></div><div className="rounded-2xl border p-4"><p className="text-xs text-neutral-500">Heures déclarées</p><p className="mt-1 text-xl font-bold">{totalHours.toLocaleString("fr-FR")}</p></div></section>
+  <section className="mt-7"><h2 className="font-semibold">Mes dates</h2>{concerts.length===0?<div className="mt-3 rounded-2xl border border-dashed p-5 text-sm text-neutral-500">Aucun concert enregistré.</div>:<div className="mt-3 space-y-3">{concerts.map((c:any)=><article key={c.id} className="rounded-2xl border p-4"><div className="flex justify-between gap-3"><div><p className="font-semibold">{c.title}</p><p className="mt-1 text-xs text-neutral-500">{new Intl.DateTimeFormat("fr-FR").format(new Date(c.performance_date+"T12:00:00"))} · {statuses.find(([v])=>v===c.status)?.[1]??c.status}</p>{(c.venue||c.city)&&<p className="mt-2 flex items-center gap-1 text-xs text-neutral-500"><MapPin size={13}/>{[c.venue,c.city].filter(Boolean).join(" · ")}</p>}<p className="mt-2 text-sm">{c.fee_eur!==null?`${Number(c.fee_eur).toLocaleString("fr-FR")} €`:"Cachet non renseigné"}{c.paid_hours!==null?` · ${Number(c.paid_hours)} h`:""}</p></div><form action={deleteConcert}><input type="hidden" name="id" value={c.id}/><ConfirmDeleteButton label="Supprimer le concert" message="Supprimer cette date ?"/></form></div></article>)}</div>}</section>
+  <section className="mt-8 rounded-3xl border p-5"><h2 className="font-semibold">Ajouter une date</h2><form action={createConcert} className="mt-4 space-y-3">
+   <label className="block text-sm">Nom / événement *<input name="title" required maxLength={240} className="mt-1 h-11 w-full rounded-xl border px-3"/></label>
+   <div className="grid grid-cols-2 gap-2"><label className="text-sm">Date *<input name="performance_date" type="date" required className="mt-1 h-11 w-full rounded-xl border px-2"/></label><label className="text-sm">Statut<select name="status" defaultValue="planned" className="mt-1 h-11 w-full rounded-xl border bg-white px-2">{statuses.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label></div>
+   <div className="grid grid-cols-2 gap-2"><label className="text-sm">Salle<input name="venue" className="mt-1 h-11 w-full rounded-xl border px-3"/></label><label className="text-sm">Ville<input name="city" className="mt-1 h-11 w-full rounded-xl border px-3"/></label></div>
+   <div className="grid grid-cols-2 gap-2"><label className="text-sm">Cachet (€)<input name="fee_eur" type="number" min="0" step="0.01" className="mt-1 h-11 w-full rounded-xl border px-2"/></label><label className="text-sm">Heures déclarées<input name="paid_hours" type="number" min="0" step="0.01" className="mt-1 h-11 w-full rounded-xl border px-2"/></label></div>
+   <label className="block text-sm">Projet<select name="project_id" defaultValue="" className="mt-1 h-11 w-full rounded-xl border bg-white px-2"><option value="">Aucun</option>{projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+   <label className="block text-sm">Structure<select name="organization_id" defaultValue="" className="mt-1 h-11 w-full rounded-xl border bg-white px-2"><option value="">Aucune</option>{organizations.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select></label>
+   <label className="block text-sm">Notes<textarea name="notes" maxLength={5000} rows={3} className="mt-1 w-full rounded-xl border p-3"/></label>
+   <button className="h-11 w-full rounded-xl bg-black font-semibold text-white">Enregistrer le concert</button>
+  </form></section>
+ </main>;
+}
