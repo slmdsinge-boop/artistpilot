@@ -62,6 +62,7 @@ export default async function OrganizationsPage({ searchParams }: { searchParams
           {error === "missing_fields" ? "Le nom et le type de structure sont obligatoires." :
            error === "invalid_siret" ? "Le SIRET doit contenir exactement 14 chiffres." :
            error === "organization_in_use" ? "Cette structure est utilisée par un projet ou un dossier de financement. Retire d’abord ces liens avant de la supprimer." :
+           error === "organization_has_funding_history" ? "Cette structure ne peut pas être supprimée car elle porte un projet ayant un historique de financement. Cet historique administratif doit être conservé." :
            error === "profile_setup_failed" ? "Impossible de préparer ton profil artiste pour le moment. Réessaie dans quelques instants." :
            error === "save_failed" ? "Impossible d’enregistrer cette modification pour le moment." :
            "Impossible d’enregistrer cette modification pour le moment."}
