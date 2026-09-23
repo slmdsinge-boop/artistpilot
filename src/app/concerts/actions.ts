@@ -59,3 +59,18 @@ export async function deleteConcert(formData:FormData){
  if(error)redirect("/concerts?error=save_failed");
  revalidatePath("/concerts");revalidatePath("/");redirect("/concerts?deleted=1");
 }
+
+
+export async function updateConcertAdmin(formData:FormData){
+ const id=String(formData.get("id")??"").trim();
+ const contractStatus=String(formData.get("contract_status")??"unknown").trim();
+ const paymentStatus=String(formData.get("payment_status")??"unknown").trim();
+ const payslipReceived=formData.get("payslip_received")==="yes"?true:formData.get("payslip_received")==="no"?false:null;
+ const aemReceived=formData.get("aem_received")==="yes"?true:formData.get("aem_received")==="no"?false:null;
+ if(!id)redirect("/concerts");
+ if(!CONTRACT_STATUSES.has(contractStatus)||!PAYMENT_STATUSES.has(paymentStatus))redirect("/concerts?error=invalid_status");
+ const {supabase,artistId}=await context();
+ const {error}=await supabase.from("concerts").update({contract_status:contractStatus,payment_status:paymentStatus,payslip_received:payslipReceived,aem_received:aemReceived,updated_at:new Date().toISOString()}).eq("id",id).eq("artist_id",artistId);
+ if(error)redirect("/concerts?error=save_failed");
+ revalidatePath("/concerts");revalidatePath("/");redirect("/concerts?updated=1");
+}
