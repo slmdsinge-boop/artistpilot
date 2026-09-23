@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { AppNavigation } from "@/components/app-navigation";
 
 export const metadata: Metadata = {
   title: "ArtistPilot",
@@ -15,7 +16,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr">
-      <body>{children}</body>
+      <body>{children}<AppNavigation/></body>
     </html>
   );
 }
