@@ -1,5 +1,5 @@
 create table if not exists public.financial_entries (
- id uuid primary key default gen_random_uuid(), artist_id uuid not null references public.artists(id) on delete cascade,
+ id uuid primary key default gen_random_uuid(), artist_id uuid not null references public.artist_profiles(id) on delete cascade,
  entry_type text not null check (entry_type in ('income','expense')), category text, label text not null,
  amount_eur numeric(12,2) not null check (amount_eur >= 0), entry_date date not null, notes text, created_at timestamptz not null default now());
 alter table public.financial_entries enable row level security;
