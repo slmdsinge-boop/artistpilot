@@ -1,3 +1,4 @@
+// Validation rebuild after Vercel rate-limit recovery.
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, CalendarDays, MapPin } from "lucide-react";
