@@ -8,7 +8,7 @@ import { createFinancialEntry, deleteFinancialEntry } from "./actions";
 const money = (value: number) => value.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 const dateFr = (value: string) => new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(value + "T00:00:00Z"));
 
-export default async function FinancesPage({ searchParams }: { searchParams: Promise<{ error?: string; success?: string }> }) {
+export default async function FinancesPage({ searchParams }: { searchParams: Promise<{ error?: string; success?: string; year?: string }> }) {
   const params = await searchParams;
   const s = await createClient();
   const { data: { user } } = await s.auth.getUser();
@@ -20,7 +20,11 @@ export default async function FinancesPage({ searchParams }: { searchParams: Pro
   const organizations = artistId ? (await s.from("organizations").select("id,name").eq("artist_id", artistId).order("name")).data ?? [] : [];
   const projectNames = new Map(projects.map((p: any) => [p.id, p.name]));
   const organizationNames = new Map(organizations.map((o: any) => [o.id, o.name]));
-  const year = todayIsoDate().slice(0, 4);
+  const currentYear = todayIsoDate().slice(0, 4);
+  const availableYears = Array.from(new Set(entries.map((e:any)=>String(e.entry_date).slice(0,4)).filter((y:string)=>/^\d{4}$/.test(y)))).sort().reverse();
+  if (!availableYears.includes(currentYear)) availableYears.unshift(currentYear);
+  const requestedYear = typeof params.year === "string" && /^\d{4}$/.test(params.year) ? params.year : currentYear;
+  const year = availableYears.includes(requestedYear) ? requestedYear : currentYear;
   const current = entries.filter((e: any) => String(e.entry_date).startsWith(year));
   const income = current.filter((e: any) => e.entry_type === "income").reduce((n: number, e: any) => n + Number(e.amount_eur), 0);
   const expenses = current.filter((e: any) => e.entry_type === "expense").reduce((n: number, e: any) => n + Number(e.amount_eur), 0);
@@ -35,6 +39,7 @@ export default async function FinancesPage({ searchParams }: { searchParams: Pro
     <p className="mt-3 text-sm text-neutral-600">Suis les recettes et dépenses de ton activité artistique.</p>
     {params.error && <p className="mt-4 rounded-xl bg-neutral-100 p-3 text-sm font-medium">Impossible d’enregistrer cette opération. Vérifie les informations saisies.</p>}
     {params.success && <p className="mt-4 rounded-xl bg-neutral-100 p-3 text-sm font-medium">{params.success === "deleted" ? "Mouvement supprimé." : "Mouvement enregistré."}</p>}
+    <form method="get" className="mt-5"><label className="text-xs font-semibold text-neutral-500">Année<select name="year" defaultValue={year} className="mt-1 h-10 w-full rounded-xl border bg-white px-3" onChange={undefined}>{availableYears.map((y:string)=><option key={y} value={y}>{y}</option>)}</select></label><button className="mt-2 h-9 w-full rounded-xl border text-xs font-semibold">Afficher cette année</button></form>
     <section className="mt-6 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-neutral-950 p-4 text-white"><p className="text-xs text-neutral-400">Solde {year}</p><p className="mt-1 text-xl font-bold">{money(income-expenses)} €</p></div><div className="rounded-2xl border p-4"><p className="text-xs text-neutral-500">Recettes {year}</p><p className="font-bold">{money(income)} €</p><p className="mt-1 text-xs">Dépenses {money(expenses)} €</p></div></section>
     {current.length>0&&<section className="mt-7"><h2 className="font-semibold">Évolution mensuelle</h2><p className="mt-1 text-xs text-neutral-500">Vue mois par mois de ton activité financière en {year}.</p><div className="mt-3 overflow-x-auto pb-1"><div className="flex w-max gap-2">{monthly.map((m:any)=><div key={m.name} className="w-28 rounded-2xl border p-3"><p className="text-xs font-semibold text-neutral-500">{m.name}</p><p className="mt-1 font-bold">{m.balance>=0?"+":""}{money(m.balance)} €</p><p className="mt-2 text-[11px] text-neutral-500">+{money(m.revenue)} €</p><p className="text-[11px] text-neutral-500">−{money(m.cost)} €</p></div>)}</div></div></section>}
     {projectBalances.length>0&&<section className="mt-7"><div className="flex items-end justify-between"><div><h2 className="font-semibold">Par projet</h2><p className="mt-1 text-xs text-neutral-500">Bilan des mouvements {year} rattachés à tes projets.</p></div></div><div className="mt-3 space-y-2">{projectBalances.map((p:any)=><div key={p.id} className="rounded-2xl border p-4"><div className="flex items-center justify-between gap-3"><p className="font-medium">{p.name}</p><p className="font-bold">{p.balance>=0?"+":""}{money(p.balance)} €</p></div><div className="mt-2 flex gap-4 text-xs text-neutral-500"><span>Recettes {money(p.revenue)} €</span><span>Dépenses {money(p.cost)} €</span></div><p className="mt-1 text-xs text-neutral-400">{p.movements} mouvement{p.movements>1?"s":""}</p></div>)}</div></section>}
