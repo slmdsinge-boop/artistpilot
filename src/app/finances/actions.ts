@@ -22,9 +22,13 @@ export async function createFinancialEntry(f: FormData) {
   const amount = amountRaw === "" ? Number.NaN : Number(amountRaw);
   const category = String(f.get("category") ?? "").trim() || null;
   const notes = String(f.get("notes") ?? "").trim() || null;
+  const projectId = String(f.get("project_id") ?? "").trim() || null;
+  const organizationId = String(f.get("organization_id") ?? "").trim() || null;
   if (!["income", "expense"].includes(type) || !label || label.length > 160 || !isValidIsoDate(date) || !Number.isFinite(amount) || amount < 0 || (category?.length ?? 0) > 80 || (notes?.length ?? 0) > 1000) redirect("/finances?error=invalid");
   const { s, artistId } = await ctx();
-  const { error } = await s.from("financial_entries").insert({ artist_id: artistId, entry_type: type, label, entry_date: date, amount_eur: amount, category, notes });
+  if (projectId) { const { data } = await s.from("projects").select("id").eq("id", projectId).eq("artist_id", artistId).maybeSingle(); if (!data) redirect("/finances?error=scope"); }
+  if (organizationId) { const { data } = await s.from("organizations").select("id").eq("id", organizationId).eq("artist_id", artistId).maybeSingle(); if (!data) redirect("/finances?error=scope"); }
+  const { error } = await s.from("financial_entries").insert({ artist_id: artistId, entry_type: type, label, entry_date: date, amount_eur: amount, category, notes, project_id: projectId, organization_id: organizationId });
   if (error) redirect("/finances?error=save");
   revalidatePath("/finances");
   redirect("/finances?success=created");
