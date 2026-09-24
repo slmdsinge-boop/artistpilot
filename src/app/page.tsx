@@ -7,7 +7,7 @@ import { UniversalAdd } from "@/components/universal-add";
 
 const modules = [
   ["Finances", WalletCards, "/finances"], ["Projets", FolderKanban, "/projects"], ["Financements", CircleDollarSign, "/funding"],
-  ["Œuvres & droits", Music2, null], ["Concerts", CalendarDays, "/concerts"],
+  ["Œuvres & droits", Music2, "/works"], ["Concerts", CalendarDays, "/concerts"],
   ["Documents", FolderOpen, null], ["Organisations", Building2, "/organizations"],
 ] as const;
 
