@@ -64,3 +64,15 @@ export async function updateFinancialEntry(f: FormData) {
   revalidatePath("/finances");
   redirect("/finances?success=updated");
 }
+
+export async function saveFinancialBudget(f: FormData) {
+  const year = Number(String(f.get("budget_year") ?? ""));
+  const incomeTarget = Number(String(f.get("income_target_eur") ?? "").replace(",", "."));
+  const expenseLimit = Number(String(f.get("expense_limit_eur") ?? "").replace(",", "."));
+  if (!Number.isInteger(year) || year < 2000 || year > 2100 || !Number.isFinite(incomeTarget) || incomeTarget < 0 || !Number.isFinite(expenseLimit) || expenseLimit < 0) redirect("/finances?error=budget");
+  const { s, artistId } = await ctx();
+  const { error } = await s.from("financial_budgets").upsert({ artist_id: artistId, budget_year: year, income_target_eur: incomeTarget, expense_limit_eur: expenseLimit, updated_at: new Date().toISOString() }, { onConflict: "artist_id,budget_year" });
+  if (error) redirect("/finances?error=budget");
+  revalidatePath("/finances");
+  redirect(`/finances?year=${year}&success=budget`);
+}
