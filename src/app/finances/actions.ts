@@ -43,3 +43,24 @@ export async function deleteFinancialEntry(f: FormData) {
   revalidatePath("/finances");
   redirect("/finances?success=deleted");
 }
+
+export async function updateFinancialEntry(f: FormData) {
+  const id = String(f.get("id") ?? "").trim();
+  const type = String(f.get("entry_type") ?? "");
+  const label = String(f.get("label") ?? "").trim();
+  const date = String(f.get("entry_date") ?? "");
+  const amountRaw = String(f.get("amount_eur") ?? "").trim().replace(",", ".");
+  const amount = amountRaw === "" ? Number.NaN : Number(amountRaw);
+  const category = String(f.get("category") ?? "").trim() || null;
+  const notes = String(f.get("notes") ?? "").trim() || null;
+  const projectId = String(f.get("project_id") ?? "").trim() || null;
+  const organizationId = String(f.get("organization_id") ?? "").trim() || null;
+  if (!id || !["income", "expense"].includes(type) || !label || label.length > 160 || !isValidIsoDate(date) || !Number.isFinite(amount) || amount < 0 || (category?.length ?? 0) > 80 || (notes?.length ?? 0) > 1000) redirect("/finances?error=invalid");
+  const { s, artistId } = await ctx();
+  if (projectId) { const { data } = await s.from("projects").select("id").eq("id", projectId).eq("artist_id", artistId).maybeSingle(); if (!data) redirect("/finances?error=scope"); }
+  if (organizationId) { const { data } = await s.from("organizations").select("id").eq("id", organizationId).eq("artist_id", artistId).maybeSingle(); if (!data) redirect("/finances?error=scope"); }
+  const { error } = await s.from("financial_entries").update({ entry_type: type, label, entry_date: date, amount_eur: amount, category, notes, project_id: projectId, organization_id: organizationId }).eq("id", id).eq("artist_id", artistId);
+  if (error) redirect("/finances?error=save");
+  revalidatePath("/finances");
+  redirect("/finances?success=updated");
+}
