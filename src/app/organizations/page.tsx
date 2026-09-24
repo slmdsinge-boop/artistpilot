@@ -37,6 +37,13 @@ export default async function OrganizationsPage({ searchParams }: { searchParams
         .order("created_at", { ascending: false })).data ?? []
     : [];
 
+  const financialEntries = access?.artist_id
+    ? (await supabase.from("financial_entries").select("organization_id,entry_type,amount_eur").eq("artist_id", access.artist_id).not("organization_id", "is", null)).data ?? []
+    : [];
+  const organizationFinance = new Map<string, { income: number; expense: number }>();
+  for (const entry of financialEntries) { if (!entry.organization_id) continue; const row = organizationFinance.get(entry.organization_id) ?? { income: 0, expense: 0 }; row[entry.entry_type === "income" ? "income" : "expense"] += Number(entry.amount_eur); organizationFinance.set(entry.organization_id, row); }
+  const money = (value: number) => value.toLocaleString("fr-FR", { maximumFractionDigits: 2 });
+
   const params = await searchParams;
   const error = typeof params.error === "string" ? params.error : null;
 
@@ -86,6 +93,7 @@ export default async function OrganizationsPage({ searchParams }: { searchParams
                       {organizationTypes.find(([value]) => value === organization.organization_type)?.[1] ?? organization.organization_type}
                     </p>
                     {organization.siret && <p className="mt-1 text-xs text-neutral-500">SIRET : {organization.siret}</p>}
+                    {organizationFinance.has(organization.id) && (() => { const f = organizationFinance.get(organization.id)!; const balance = f.income - f.expense; return <div className="mt-3 rounded-xl bg-neutral-50 p-3"><p className="text-xs font-semibold text-neutral-500">Bilan financier</p><p className="mt-1 font-bold">{balance >= 0 ? "+" : ""}{money(balance)} €</p><p className="mt-1 text-xs text-neutral-500">Recettes {money(f.income)} € · Dépenses {money(f.expense)} €</p><Link href="/finances" className="mt-2 inline-block text-xs font-semibold underline">Voir les finances</Link></div>; })()}
                   </div>
                   <form action={deleteOrganization}>
                     <input type="hidden" name="id" value={organization.id}/>
