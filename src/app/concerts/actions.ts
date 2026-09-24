@@ -44,7 +44,7 @@ export async function createConcert(formData:FormData){
  if(notes&&notes.length>5000)redirect("/concerts?error=notes_too_long");
  let fee:number|null,paidHours:number|null,cachetCount:number|null;
  try{fee=nullableNumber(formData.get("fee_eur"));paidHours=nullableNumber(formData.get("paid_hours"));cachetCount=nullableNumber(formData.get("cachet_count"));}catch{redirect("/concerts?error=invalid_number");}
- if(cachetCount!==null&&(!Number.isInteger(cachetCount)||cachetCount>28))redirect("/concerts?error=invalid_cachet_count");
+ if(cachetCount!==null&&!Number.isInteger(cachetCount))redirect("/concerts?error=invalid_cachet_count");
  const {supabase,artistId}=await context();
  if(projectId){const {data}=await supabase.from("projects").select("id").eq("id",projectId).eq("artist_id",artistId).maybeSingle();if(!data)redirect("/concerts?error=invalid_project");}
  if(organizationId){const {data}=await supabase.from("organizations").select("id").eq("id",organizationId).eq("artist_id",artistId).maybeSingle();if(!data)redirect("/concerts?error=invalid_organization");}
