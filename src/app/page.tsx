@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { CircleDollarSign, Music2, CalendarDays, FolderOpen, Bell, FolderKanban, Building2, UserRound, ChevronRight, Sparkles } from "lucide-react";
+import { CircleDollarSign, Music2, CalendarDays, FolderOpen, Bell, FolderKanban, Building2, UserRound, ChevronRight, Sparkles, WalletCards } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { daysBetweenIsoDates, todayIsoDate } from "@/lib/dates";
 import { UniversalAdd } from "@/components/universal-add";
 
 const modules = [
-  ["Projets", FolderKanban, "/projects"], ["Financements", CircleDollarSign, "/funding"],
+  ["Finances", WalletCards, "/finances"], ["Projets", FolderKanban, "/projects"], ["Financements", CircleDollarSign, "/funding"],
   ["Œuvres & droits", Music2, null], ["Concerts", CalendarDays, "/concerts"],
   ["Documents", FolderOpen, null], ["Organisations", Building2, "/organizations"],
 ] as const;
